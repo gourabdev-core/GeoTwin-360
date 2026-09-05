@@ -1,0 +1,28 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-server/
+
+# Local agent / IDE configuration
+.agents/
+.claude/
+.kilo/
+.kilocode/
+
+# Local project documentation
+AGENTS.md
+PRD.md
+DESIGN.md
+GEMINI.md
+API.md
+DATABASE_SCHEME.md
+SYSTEM_ARCHITECTURE.md
+geo-twin-360-ui-layout.md
+skills-lock.json
