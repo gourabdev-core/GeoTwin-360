@@ -14,9 +14,9 @@ const router = Router();
  *   simulationId (string, optional) - UUID of a completed simulation run
  */
 router.post('/recommendations', async (req: Request, res: Response, next: NextFunction) => {
-  const { locationId, targetYear, simulationId } = req.body;
-
   try {
+    const { locationId, targetYear, simulationId, scenario } = req.body;
+
     // 1. Validate locationId
     if (!locationId || typeof locationId !== 'string') {
       const err: any = new Error('Valid locationId is required.');
@@ -34,7 +34,13 @@ router.post('/recommendations', async (req: Request, res: Response, next: NextFu
       throw err;
     }
 
-    // 3. Validate optional simulationId
+    // 3. Validate optional scenario
+    const validScenarios = ['default', 'resilience', 'accelerated'];
+    const scenarioName = scenario && validScenarios.includes(String(scenario))
+      ? String(scenario)
+      : 'default';
+
+    // 4. Validate optional simulationId
     if (simulationId !== undefined && typeof simulationId !== 'string') {
       const err: any = new Error('simulationId must be a string if provided.');
       err.statusCode = 400;
@@ -42,10 +48,11 @@ router.post('/recommendations', async (req: Request, res: Response, next: NextFu
       throw err;
     }
 
-    // 4. Generate recommendations
+    // 5. Generate recommendations
     const result = await AdvisorService.generateRecommendations(
       locationId,
       year,
+      scenarioName,
       simulationId || undefined
     );
 

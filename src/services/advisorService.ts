@@ -9,6 +9,7 @@ export const advisorService = {
   async getRecommendations(
     locationId: string,
     targetYear: number,
+    scenario?: string,
     simulationId?: string
   ): Promise<AIAdvisorResponse> {
     const response = await apiClient.post(
@@ -16,6 +17,7 @@ export const advisorService = {
       {
         locationId,
         targetYear,
+        scenario: scenario || 'default',
         simulationId,
       },
       {

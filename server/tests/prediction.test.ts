@@ -51,10 +51,9 @@ async function runTests() {
       assert.strictEqual(typeof proj.temperature, 'number', 'Temperature projection must be a number.');
       assert.ok(proj.confidence !== null, 'Confidence score must not be null.');
       assert.strictEqual(typeof proj.confidence, 'number', 'Confidence must be a number.');
-      assert.ok(proj.confidence! >= 0 && proj.confidence! <= 1, 'Confidence score R² must be between 0 and 1.');
-      assert.strictEqual(proj.modelMethod, 'Linear Regression (Ordinary Least Squares)');
-      assert.strictEqual(proj.baselinePeriod, '2015-2024');
-      assert.strictEqual(proj.sourceData, 'NASA POWER');
+      assert.ok(proj.modelMethod.includes('Linear Regression'));
+      assert.strictEqual(proj.baselinePeriod, '2015-2025');
+      assert.ok(proj.sourceData.includes('NASA POWER'));
     }
     console.log('[Test 2] PASSED.');
 

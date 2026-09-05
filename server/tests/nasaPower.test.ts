@@ -76,7 +76,7 @@ async function runTests() {
     console.log('[Test 3] Fetching live data from NASA POWER API...');
     const rawRecords = await NasaPowerService.fetchLiveHistorical(lat, lng);
     assert.ok(Array.isArray(rawRecords), 'Result must be an array');
-    assert.strictEqual(rawRecords.length, 10, 'Should return exactly 10 years of data (2015-2024)');
+    assert.ok(rawRecords.length >= 11, 'Should return at least 11 records (2015-2025 observed + 2026 YTD)');
     
     rawRecords.forEach((rec, idx) => {
       assert.strictEqual(rec.year, 2015 + idx, `Year should be ${2015 + idx}`);
@@ -86,7 +86,7 @@ async function runTests() {
       assert.ok(rec.precipitation !== null, 'Precipitation should not be null');
     });
 
-    console.log(`- Successfully fetched 10 years of live data from NASA POWER. 2015: Temp ${rawRecords[0].temperature}°C, Precip ${rawRecords[0].precipitation} mm/day.`);
+    console.log(`- Successfully fetched live data from NASA POWER (${rawRecords.length} records). 2015: Temp ${rawRecords[0].temperature}°C, Precip ${rawRecords[0].precipitation} mm/day.`);
     console.log('[Test 3] PASSED.');
 
     if (!locationId) {

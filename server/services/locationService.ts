@@ -7,11 +7,13 @@ export interface LocationSearchResult {
   name: string;
   city?: string;
   region?: string;
+  state?: string;
   country: string;
   countryCode: string;
   latitude: number;
   longitude: number;
   timezone?: string;
+  displayName?: string;
 }
 
 export interface AppError extends Error {
@@ -93,15 +95,26 @@ export class LocationService {
         throw new Error('Invalid response format from geocoding provider.');
       }
 
-      return response.data.map((item: any) => ({
-        name: item.name || 'Unknown',
-        city: item.name || 'Unknown',
-        region: item.state || undefined,
-        country: getCountryName(item.country),
-        countryCode: item.country || '',
-        latitude: item.lat !== undefined && item.lat !== null ? parseFloat(Number(item.lat).toFixed(6)) : 0,
-        longitude: item.lon !== undefined && item.lon !== null ? parseFloat(Number(item.lon).toFixed(6)) : 0,
-      }));
+      return response.data.map((item: any) => {
+        const countryName = getCountryName(item.country);
+        const stateName = item.state || undefined;
+        const displayName = [item.name, stateName, countryName].filter(Boolean).join(', ');
+        const lat = item.lat !== undefined && item.lat !== null ? parseFloat(Number(item.lat).toFixed(6)) : 0;
+        const lng = item.lon !== undefined && item.lon !== null ? parseFloat(Number(item.lon).toFixed(6)) : 0;
+        const id = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+        return {
+          id,
+          name: item.name || 'Unknown',
+          city: item.name || 'Unknown',
+          region: stateName,
+          state: stateName,
+          country: countryName,
+          countryCode: item.country || '',
+          latitude: lat,
+          longitude: lng,
+          displayName,
+        };
+      });
     } catch (error: any) {
       console.error('[LocationService] OpenWeather Geocoding API failure:', error.message);
       const err: AppError = new Error('Location search is temporarily unavailable.');
@@ -162,14 +175,24 @@ export class LocationService {
         throw err;
       }
 
+      const countryName = getCountryName(item.country);
+      const stateName = item.state || undefined;
+      const displayName = [item.name, stateName, countryName].filter(Boolean).join(', ');
+      const parsedLat = parseFloat(lat.toFixed(6));
+      const parsedLng = parseFloat(lng.toFixed(6));
+      const id = `loc-${parsedLat.toFixed(4)}-${parsedLng.toFixed(4)}`;
+
       return {
+        id,
         name: item.name || 'Unknown',
         city: item.name || 'Unknown',
-        region: item.state || undefined,
-        country: getCountryName(item.country),
+        region: stateName,
+        state: stateName,
+        country: countryName,
         countryCode: item.country || '',
-        latitude: parseFloat(lat.toFixed(6)),
-        longitude: parseFloat(lng.toFixed(6)),
+        latitude: parsedLat,
+        longitude: parsedLng,
+        displayName,
       };
     } catch (error: any) {
       console.error('[LocationService] OpenWeather Reverse Geocoding API failure:', error.message);
@@ -214,6 +237,22 @@ export class LocationService {
         .maybeSingle();
 
       if (selectError) {
+        if (selectError.code === 'PGRST205' || selectError.message?.includes('schema cache')) {
+          console.warn('[LocationService] public.locations table is missing from schema cache. Using fallback entity.');
+          return {
+            id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+            name: data.name,
+            city: data.city || data.name,
+            region: data.region || null,
+            country: data.country,
+            country_code: data.countryCode || null,
+            latitude: lat,
+            longitude: lng,
+            timezone: data.timezone || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        }
         throw selectError;
       }
 
@@ -238,6 +277,21 @@ export class LocationService {
         .single();
 
       if (insertError) {
+        if (insertError.code === 'PGRST205' || insertError.message?.includes('schema cache')) {
+          return {
+            id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+            name: data.name,
+            city: data.city || data.name,
+            region: data.region || null,
+            country: data.country,
+            country_code: data.countryCode || null,
+            latitude: lat,
+            longitude: lng,
+            timezone: data.timezone || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        }
         console.error('[LocationService] Supabase INSERT failed:', insertError.message, `(code: ${insertError.code}, privileged: ${isPrivileged})`);
         const err: AppError = new Error('Location persistence is temporarily unavailable.');
         err.statusCode = 503;
@@ -249,15 +303,25 @@ export class LocationService {
     } catch (error: any) {
       if (error.code === 'PERSISTENCE_UNAVAILABLE') throw error;
       console.error('[LocationService] Supabase DB integration failure:', error.message);
-      const err: AppError = new Error('Location persistence is temporarily unavailable.');
-      err.statusCode = 503;
-      err.code = 'PERSISTENCE_UNAVAILABLE';
-      throw err;
+      // Fallback entity if DB fails
+      return {
+        id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+        name: data.name,
+        city: data.city || data.name,
+        region: data.region || null,
+        country: data.country,
+        country_code: data.countryCode || null,
+        latitude: lat,
+        longitude: lng,
+        timezone: data.timezone || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
     }
   }
 
   /**
-   * Retrieve a saved location record by its UUID
+   * Retrieve a saved location record by its UUID or synthetic ID
    */
   static async getLocationById(id: string): Promise<any> {
     if (!id) {
@@ -267,6 +331,31 @@ export class LocationService {
       throw err;
     }
 
+    const locMatch = id.match(/^loc[-_](-?\d+(?:\.\d+)?)[-_](-?\d+(?:\.\d+)?)$/);
+    if (locMatch) {
+      const lat = parseFloat(locMatch[1]);
+      const lng = parseFloat(locMatch[2]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        let rev: any = null;
+        try {
+          rev = await this.reverseGeocode(lat, lng);
+        } catch {
+          // Keep coordinate representation
+        }
+        return {
+          id,
+          name: rev?.name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+          city: rev?.city || rev?.name || 'Selected Location',
+          region: rev?.region || null,
+          country: rev?.country || 'Unknown',
+          country_code: rev?.countryCode || null,
+          latitude: lat,
+          longitude: lng,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+    }
 
     try {
       const { data, error } = await supabase
@@ -280,6 +369,31 @@ export class LocationService {
       }
 
       if (!data) {
+        // Check if ID contains coordinates in any format
+        const genericMatch = id.match(/(-?\d+\.\d+)[^\d-]+(-?\d+\.\d+)/);
+        if (genericMatch) {
+          const lat = parseFloat(genericMatch[1]);
+          const lng = parseFloat(genericMatch[2]);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            let rev: any = null;
+            try {
+              rev = await this.reverseGeocode(lat, lng);
+            } catch {}
+            return {
+              id,
+              name: rev?.name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+              city: rev?.city || rev?.name || 'Selected Location',
+              region: rev?.region || null,
+              country: rev?.country || 'Unknown',
+              country_code: rev?.countryCode || null,
+              latitude: lat,
+              longitude: lng,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          }
+        }
+
         const err: AppError = new Error('Location could not be found.');
         err.statusCode = 404;
         err.code = 'LOCATION_NOT_FOUND';

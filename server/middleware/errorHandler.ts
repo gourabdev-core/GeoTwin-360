@@ -6,6 +6,14 @@ export interface AppError extends Error {
   details?: any;
 }
 
+function sanitizeMessage(msg: string): string {
+  if (!msg) return 'An unexpected error occurred.';
+  return msg
+    .replace(/(appid|api_key|key|token|secret)=([a-zA-Z0-9_-]+)/gi, '$1=[REDACTED]')
+    .replace(/AIza[0-9A-Za-z-_]{35}/g, '[REDACTED]')
+    .replace(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED]');
+}
+
 export const errorHandler = (
   err: AppError,
   req: Request,
@@ -15,7 +23,8 @@ export const errorHandler = (
 ) => {
   const statusCode = err.statusCode || 500;
   const errorCode = err.code || 'INTERNAL_ERROR';
-  const message = err.message || 'Something went wrong on the server.';
+  const rawMessage = err.message || 'Something went wrong on the server.';
+  const message = sanitizeMessage(rawMessage);
   const details = err.details || {};
 
   console.error(`[Error] ${req.method} ${req.url} - Code: ${errorCode}, Status: ${statusCode}`);
@@ -33,3 +42,4 @@ export const errorHandler = (
     },
   });
 };
+

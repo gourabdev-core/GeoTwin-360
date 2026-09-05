@@ -1,6 +1,7 @@
 import React from 'react';
 import { ClimateMetricCard } from './ClimateMetricCard.js';
 import { ClimateMetrics } from '../../types/domain.js';
+import { usePreferences } from '../../context/PreferencesContext.js';
 
 interface ClimateOverviewGridProps {
   metrics: ClimateMetrics | null;
@@ -9,6 +10,7 @@ interface ClimateOverviewGridProps {
   error: string | null;
   floodRiskLoading: boolean;
   floodRiskError: string | null;
+  heatRiskLevel?: string | null;
 }
 
 export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
@@ -18,10 +20,17 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
   error,
   floodRiskLoading,
   floodRiskError,
+  heatRiskLevel,
 }) => {
+  const { preferences } = usePreferences();
   // Bind UI directly to live backend payload properties via standard null-chaining
-  const tempValue = metrics?.temperature?.value ?? null;
-  const tempUnit = metrics?.temperature?.unit ?? '°C';
+  const rawTempValue = metrics?.temperature?.value ?? null;
+  const isFahrenheit = preferences.temperatureUnit === 'fahrenheit';
+  const tempValue = rawTempValue !== null
+    ? (isFahrenheit ? Number(((rawTempValue * 9) / 5 + 32).toFixed(1)) : Number(rawTempValue.toFixed(1)))
+    : null;
+  const tempUnit = isFahrenheit ? '°F' : (metrics?.temperature?.unit ?? '°C');
+  const heatIndicator = heatRiskLevel && heatRiskLevel !== 'UNAVAILABLE' ? ` (${heatRiskLevel.replace('_', ' ')})` : '';
 
   const floodValue = floodRiskLevel ? floodRiskLevel.replace('_', ' ') : null;
 
@@ -43,9 +52,11 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
       <ClimateMetricCard
         name="Avg Temperature"
         value={tempValue}
-        unit={tempUnit}
+        unit={`${tempUnit}${heatIndicator}`}
         loading={loading}
         error={error}
+        dateOrYear="2026 YTD"
+        sourceOrStatus="NASA / Open-Meteo"
       />
 
       {/* 2. Flood Risk */}
@@ -55,6 +66,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit=""
         loading={floodRiskLoading}
         error={floodRiskError}
+        dateOrYear="Current"
+        sourceOrStatus="Hydrologic Model"
       />
 
       {/* 3. Water Availability */}
@@ -64,6 +77,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={waterUnit}
         loading={loading}
         error={error}
+        dateOrYear="2026 Active"
+        sourceOrStatus="Open-Meteo Telemetry"
       />
 
       {/* 4. Air Quality */}
@@ -73,6 +88,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={aqiUnit}
         loading={loading}
         error={error}
+        dateOrYear="Live Telemetry"
+        sourceOrStatus="Open-Meteo Telemetry"
       />
 
       {/* 5. Green Cover */}
@@ -82,6 +99,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={greenUnit}
         loading={loading}
         error={error}
+        dateOrYear="Current"
+        sourceOrStatus="Sentinel-2 Telemetry"
       />
 
       {/* 6. CO2 Emissions */}
@@ -91,6 +110,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={co2Unit}
         loading={loading}
         error={error}
+        dateOrYear="vs 2025 Baseline"
+        sourceOrStatus="Regional Inventory"
       />
     </div>
   );

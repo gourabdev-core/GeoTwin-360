@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, RefreshCw, LogIn } from 'lucide-react';
-import { auth, googleProvider } from '../firebase.js';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { useAuth } from '../context/AuthContext.js';
+import { sanitizeErrorMessage } from '../utils/errorSanitizer.js';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'signin' | 'signup';
-  onAuthSuccess: (user: { name: string; role: string; email: string }) => void;
+  onAuthSuccess?: (user: { name: string; role: string; email: string }) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -17,12 +17,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   mode: initialMode,
   onAuthSuccess,
 }) => {
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -35,42 +37,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       if (mode === 'signin') {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        onAuthSuccess({
-          name: user.displayName || user.email?.split('@')[0] || 'User',
+        const result = await signIn(email, password);
+        if (!result.success) {
+          setError(result.error || 'Incorrect email or password. Please try again.');
+          return;
+        }
+        onAuthSuccess?.({
+          name: email.split('@')[0],
           role: 'Sustainability Lead',
-          email: user.email || '',
+          email,
         });
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        onAuthSuccess({
-          name: name || user.email?.split('@')[0] || 'User',
+        const result = await signUp(email, password, name);
+        if (!result.success) {
+          setError(result.error || 'Failed to create account.');
+          return;
+        }
+        if (!result.sessionEstablished) {
+          setSuccessMessage('Account created successfully! Please check your email to verify your address, then sign in.');
+          setMode('signin');
+          return;
+        }
+        onAuthSuccess?.({
+          name,
           role: 'Sustainability Lead',
-          email: user.email || '',
+          email,
         });
       }
       onClose();
     } catch (err: any) {
-      console.error('[AuthModal] Auth error:', err);
-      // Clean up Firebase standard errors for user readability
-      let friendlyMessage = err.message;
-      if (err.code === 'auth/wrong-password') {
-        friendlyMessage = 'Incorrect password. Please try again.';
-      } else if (err.code === 'auth/user-not-found') {
-        friendlyMessage = 'No account found with this email.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        friendlyMessage = 'An account already exists with this email.';
-      } else if (err.code === 'auth/weak-password') {
-        friendlyMessage = 'Password should be at least 6 characters.';
-      } else if (err.code === 'auth/invalid-email') {
-        friendlyMessage = 'Please enter a valid email address.';
-      }
-      setError(friendlyMessage);
+      setError(sanitizeErrorMessage(err, 'An unexpected error occurred. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -79,18 +79,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      onAuthSuccess({
-        name: user.displayName || 'Google User',
-        role: 'Sustainability Lead',
-        email: user.email || '',
-      });
+      const result = await signInWithGoogle();
+      if (!result.success) {
+        setError(result.error || 'Google sign-in was canceled or failed.');
+        return;
+      }
       onClose();
     } catch (err: any) {
-      console.error('[AuthModal] Google Auth error:', err);
-      setError(err.message || 'An error occurred during Google Sign-In.');
+      setError(sanitizeErrorMessage(err, 'An error occurred during Google Sign-In.'));
     } finally {
       setLoading(false);
     }
@@ -122,6 +120,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Access high-resolution resilience simulations
           </p>
         </div>
+
+        {successMessage && (
+          <div className="bg-[#1ed760]/10 border border-[#1ed760]/30 text-[#1ed760] p-2.5 rounded text-xs">
+            {successMessage}
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-2.5 rounded text-xs">

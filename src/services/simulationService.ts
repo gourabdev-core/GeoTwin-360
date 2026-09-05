@@ -8,12 +8,14 @@ export const simulationService = {
   async runSimulation(
     locationId: string,
     year: number,
-    interventions: string[]
+    interventions: string[],
+    scenario: string = 'default'
   ): Promise<SimulationResult> {
     const response = await apiClient.post('/simulations', {
       locationId,
       year,
       interventions,
+      scenario,
     });
     return response.data.data;
   },

@@ -7,11 +7,16 @@ import { RiskService } from '../services/riskService.js';
 import { SimulationService } from '../services/simulationService.js';
 import { AdvisorService } from '../services/advisorService.js';
 import { PDFService, PDFReportData } from '../services/pdfService.js';
+import { requireAuth } from '../middleware/auth.js';
+import { DatabaseSavedReport } from '../types/database.js';
 import path from 'path';
 import fs from 'fs';
 
 const router = Router();
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+// In-memory fallback cache for development/test environments when DB table is pending migration
+const memorySavedReports = new Map<string, DatabaseSavedReport>();
 
 /**
  * POST /api/v1/reports
@@ -350,6 +355,238 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   } catch (error) {
     next(error);
   }
+});
+
+// =========================================================================
+// SAVED REPORTS (Authenticated User Scoped Endpoints)
+// =========================================================================
+
+/**
+ * GET /api/v1/reports/saved
+ * Retrieves all saved reports for the authenticated user.
+ */
+router.get('/saved', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.id;
+
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      return res.json({ data });
+    }
+  } catch (err: any) {
+    console.warn('[Reports API] DB saved_reports fetch error:', err.message);
+  }
+
+  // Fallback to in-memory store for dev/testing when DB table is pending
+  const userReports = Array.from(memorySavedReports.values())
+    .filter((r) => r.user_id === userId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  res.json({ data: userReports });
+});
+
+/**
+ * POST /api/v1/reports/saved
+ * Saves a climate report for the authenticated user.
+ * Discards any user_id passed from the client and strictly enforces req.user.id.
+ */
+router.post('/saved', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.id;
+  const { title, locationId, scenarioId, summary, fileUrl, metadata } = req.body;
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Report title is required and cannot be empty.',
+      },
+    });
+  }
+
+  const reportRecord: DatabaseSavedReport = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    location_id: locationId || null,
+    scenario_id: scenarioId || null,
+    title: title.trim(),
+    summary: summary || metadata?.aiSummary || null,
+    status: 'READY',
+    file_url: fileUrl || null,
+    metadata: metadata || {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .insert(reportRecord)
+      .select()
+      .single();
+
+    if (!error && data) {
+      memorySavedReports.set(data.id, data as DatabaseSavedReport);
+      return res.status(201).json({ data });
+    }
+  } catch (err: any) {
+    console.warn('[Reports API] DB saved_reports insert skipped (fallback used):', err.message);
+  }
+
+  memorySavedReports.set(reportRecord.id, reportRecord);
+  res.status(201).json({ data: reportRecord });
+});
+
+/**
+ * GET /api/v1/reports/saved/:id
+ * Retrieves a single saved report, strictly ensuring it belongs to the authenticated user.
+ */
+router.get('/saved/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!error && data) {
+      return res.json({ data });
+    }
+  } catch (err: any) {
+    console.warn('[Reports API] DB saved_reports single fetch error:', err.message);
+  }
+
+  const mem = memorySavedReports.get(id);
+  if (mem && mem.user_id === userId) {
+    return res.json({ data: mem });
+  }
+
+  res.status(404).json({
+    error: {
+      code: 'REPORT_NOT_FOUND',
+      message: 'Report not found or you do not have permission to access it.',
+    },
+  });
+});
+
+/**
+ * PATCH /api/v1/reports/saved/:id
+ * Renames/updates a saved report, strictly ensuring it belongs to the authenticated user.
+ */
+router.patch('/saved/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
+  const { title } = req.body;
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'A valid non-empty title is required for rename.',
+      },
+    });
+  }
+
+  const trimmedTitle = title.trim();
+  let updatedRecord: DatabaseSavedReport | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .update({ title: trimmedTitle, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+
+    if (!error && data) {
+      updatedRecord = data as DatabaseSavedReport;
+      memorySavedReports.set(id, updatedRecord);
+    }
+  } catch (err: any) {
+    console.warn('[Reports API] DB saved_reports rename error:', err.message);
+  }
+
+  if (!updatedRecord) {
+    const mem = memorySavedReports.get(id);
+    if (mem && mem.user_id === userId) {
+      mem.title = trimmedTitle;
+      mem.updated_at = new Date().toISOString();
+      memorySavedReports.set(id, mem);
+      updatedRecord = mem;
+    }
+  }
+
+  if (!updatedRecord) {
+    return res.status(404).json({
+      error: {
+        code: 'REPORT_NOT_FOUND',
+        message: 'Report not found or you do not have permission to modify it.',
+      },
+    });
+  }
+
+  res.json({ data: updatedRecord });
+});
+
+/**
+ * DELETE /api/v1/reports/saved/:id
+ * Deletes a saved report, strictly ensuring it belongs to the authenticated user.
+ */
+router.delete('/saved/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user!.id;
+  const { id } = req.params;
+  let deleted = false;
+
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
+
+    if (!error && data && data.length > 0) {
+      deleted = true;
+      memorySavedReports.delete(id);
+    }
+  } catch (err: any) {
+    console.warn('[Reports API] DB saved_reports delete error:', err.message);
+  }
+
+  const mem = memorySavedReports.get(id);
+  if (mem) {
+    if (mem.user_id === userId) {
+      memorySavedReports.delete(id);
+      deleted = true;
+    } else {
+      return res.status(404).json({
+        error: {
+          code: 'REPORT_NOT_FOUND',
+          message: 'Report not found or you do not have permission to delete it.',
+        },
+      });
+    }
+  }
+
+  if (!deleted) {
+    return res.status(404).json({
+      error: {
+        code: 'REPORT_NOT_FOUND',
+        message: 'Report not found or you do not have permission to delete it.',
+      },
+    });
+  }
+
+  res.json({ success: true, message: 'Report deleted successfully.' });
 });
 
 /**

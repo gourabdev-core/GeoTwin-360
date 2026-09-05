@@ -27,9 +27,9 @@ export interface RiskMapResponse {
 }
 
 export const riskService = {
-  async getRiskSummary(locationId: string, metric: string, year: number): Promise<RiskMetricResponse> {
+  async getRiskSummary(locationId: string, metric: string, year: number, scenario: string = 'default'): Promise<RiskMetricResponse> {
     const response = await apiClient.get(`/risk/${locationId}`, {
-      params: { metric, year }
+      params: { metric, year, scenario }
     });
     return response.data.data;
   },
@@ -37,6 +37,13 @@ export const riskService = {
   async getRiskMapData(locationId: string, metric: string, year: number, params?: Record<string, any>): Promise<RiskMapResponse> {
     const response = await apiClient.get(`/risk/${locationId}/map`, {
       params: { metric, year, ...params }
+    });
+    return response.data.data;
+  },
+
+  async getAllRisks(locationId: string, year: number, scenario: string = 'default'): Promise<{ locationId: string; year: number; risks: Record<string, any> }> {
+    const response = await apiClient.get('/risk', {
+      params: { locationId, year, scenario }
     });
     return response.data.data;
   }

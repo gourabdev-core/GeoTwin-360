@@ -14,7 +14,29 @@ const envSchema = z.object({
 });
 
 const getEnv = () => {
-  const result = envSchema.safeParse(process.env);
+  const resolvedSupabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    '';
+
+  const resolvedSupabaseAnonKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    '';
+
+  const rawEnv = {
+    PORT: process.env.PORT || '3001',
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    SUPABASE_URL: resolvedSupabaseUrl,
+    SUPABASE_ANON_KEY: resolvedSupabaseAnonKey,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+    OPENWEATHER_API_KEY: process.env.OPENWEATHER_API_KEY || '',
+  };
+
+  const result = envSchema.safeParse(rawEnv);
 
   if (!result.success) {
     console.error('Environment validation failed:');
@@ -30,14 +52,15 @@ const getEnv = () => {
   }
 
   return {
-    PORT: Number(process.env.PORT || '3001'),
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    SUPABASE_URL: process.env.SUPABASE_URL || '',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-    OPENWEATHER_API_KEY: process.env.OPENWEATHER_API_KEY || '',
+    PORT: Number(rawEnv.PORT),
+    NODE_ENV: rawEnv.NODE_ENV,
+    SUPABASE_URL: rawEnv.SUPABASE_URL,
+    SUPABASE_ANON_KEY: rawEnv.SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: rawEnv.SUPABASE_SERVICE_ROLE_KEY,
+    GEMINI_API_KEY: rawEnv.GEMINI_API_KEY,
+    OPENWEATHER_API_KEY: rawEnv.OPENWEATHER_API_KEY,
   };
 };
 
 export const env = getEnv();
+

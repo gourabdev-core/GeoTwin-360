@@ -9,6 +9,17 @@ export interface GeoTwinLocation {
   longitude: number;
 }
 
+export interface WeatherForecastPoint {
+  timestamp: string;
+  time: string;
+  temperature: number;
+  feelsLike: number;
+  humidity: number;
+  description: string;
+  icon?: string;
+  windSpeed: number;
+}
+
 export interface ClimateData {
   location?: GeoTwinLocation;
   latitude: number;
@@ -27,14 +38,18 @@ export interface ClimateData {
   dataType: 'current/live' | 'cached' | 'historical' | 'projected' | 'simulated' | 'fallback';
   retrievedAt: string;
 
-  // Backward compatibility fields for OpenWeather (M4)
+  // Backward compatibility & extended weather fields
   windSpeed?: number;
   windDirection?: number;
   cloudiness?: number;
   description?: string;
   icon?: string;
   aqi?: number;
+  sunrise?: string;
+  sunset?: string;
+  forecast?: WeatherForecastPoint[];
 
   // Backward compatibility fields for NASA POWER (M5)
   year?: number;
 }
+

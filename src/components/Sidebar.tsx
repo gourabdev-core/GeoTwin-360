@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Map,
@@ -16,6 +16,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const routerLocation = useLocation();
+
   const navItems = [
     {
       to: '/dashboard',
@@ -85,7 +87,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {navItems.map((item) => (
             <NavLink
               key={item.to}
-              to={item.to}
+              to={{
+                pathname: item.to,
+                search: routerLocation.search,
+              }}
               onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center space-x-3 px-4 py-2.5 rounded-md text-sm transition-all duration-150 font-semibold select-none ${

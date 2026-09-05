@@ -1,113 +1,246 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiClient } from '../services/api.js';
+import { LocationService } from '../services/locationService.js';
 import { LocationContext as LocationModel } from '../types/domain.js';
+
+const STORAGE_KEY = 'geotwin_selected_location';
+
+export const DEFAULT_LOCATION: LocationModel = {
+  id: 'loc-22.5726-88.3639',
+  name: 'Kolkata, West Bengal, India',
+  city: 'Kolkata',
+  region: 'West Bengal',
+  state: 'West Bengal',
+  country: 'India',
+  countryCode: 'IN',
+  latitude: 22.572646,
+  longitude: 88.363895,
+  displayName: 'Kolkata, West Bengal, India',
+};
 
 interface LocationContextType {
   selectedLocation: LocationModel | null;
   loading: boolean;
   error: string | null;
-  selectLocation: (location: Omit<LocationModel, 'id'>) => Promise<void>;
+  selectLocation: (location: Omit<LocationModel, 'id'> & { id?: string }) => Promise<void>;
   clearLocation: () => void;
+  formatLocationName: (location?: { name: string; region?: string; state?: string; country?: string; displayName?: string } | null) => string;
 }
 
 const LocationStateContext = createContext<LocationContextType | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedLocation, setSelectedLocation] = useState<LocationModel | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const initRef = useRef<boolean>(false);
 
   const urlLat = searchParams.get('lat');
   const urlLng = searchParams.get('lng');
+  const urlName = searchParams.get('name');
 
-  // Load location from URL parameters on mount or URL change
+  const formatLocationName = useCallback((loc?: { name?: string; city?: string; region?: string; state?: string; country?: string; displayName?: string } | null): string => {
+    if (!loc) return '';
+    if (loc.displayName) {
+      const parts = loc.displayName.split(',').map(p => p.trim()).filter(Boolean);
+      const unique = parts.filter((val, idx) => parts.indexOf(val) === idx);
+      return unique.join(', ');
+    }
+    const stateName = loc.state || loc.region;
+    const parts: string[] = [];
+    if (loc.name) {
+      loc.name.split(',').forEach(p => {
+        const trimmed = p.trim();
+        if (trimmed && !parts.includes(trimmed)) parts.push(trimmed);
+      });
+    }
+    if (stateName && !parts.includes(stateName)) parts.push(stateName);
+    if (loc.country && !parts.includes(loc.country)) parts.push(loc.country);
+    return parts.join(', ');
+  }, []);
+
+  // Sync selected location with local storage & URL
+  const applyLocation = useCallback((loc: LocationModel, updateUrl: boolean = true) => {
+    setSelectedLocation(loc);
+    setError(null);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+    } catch {
+      // Ignore local storage write errors
+    }
+
+    if (updateUrl) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('lat', loc.latitude.toFixed(6));
+          next.set('lng', loc.longitude.toFixed(6));
+          if (loc.displayName && !loc.displayName.startsWith('Location (')) {
+            next.set('name', loc.displayName);
+          } else if (loc.name && !loc.name.startsWith('Location (')) {
+            next.set('name', loc.name);
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [setSearchParams]);
+
+  // Initial load: URL query only -> No default fallback
   useEffect(() => {
-    const loadFromUrl = async () => {
-      if (!urlLat || !urlLng) {
-        if (selectedLocation) {
-          setSelectedLocation(null);
+    const initializeLocation = async () => {
+      // Case 1: Coordinates provided in URL (Authoritative)
+      if (urlLat && urlLng) {
+        const lat = parseFloat(urlLat);
+        const lng = parseFloat(urlLng);
+
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          if (
+            selectedLocation &&
+            Math.abs(selectedLocation.latitude - lat) < 0.0001 &&
+            Math.abs(selectedLocation.longitude - lng) < 0.0001
+          ) {
+            setLoading(false);
+            return;
+          }
+
+          const fallbackName = urlName ? urlName.split(',')[0].trim() : `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+          const fallbackCity = fallbackName;
+          const fallbackDisplayName = urlName || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+
+          const immediateLocation: LocationModel = {
+            id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+            name: fallbackName,
+            city: fallbackCity,
+            latitude: lat,
+            longitude: lng,
+            country: 'Unknown',
+            displayName: fallbackDisplayName,
+          };
+
+          applyLocation(immediateLocation, false);
+          setLoading(false);
+
+          // If display name was generic coordinates, reverse geocode to enrich name
+          if (!urlName) {
+            try {
+              const suggestion = await LocationService.reverseGeocode(lat, lng);
+              if (suggestion) {
+                const stateName = suggestion.state || suggestion.region;
+                const displayName = suggestion.displayName || [suggestion.name, stateName, suggestion.country].filter(Boolean).filter((val, idx, arr) => arr.indexOf(val) === idx).join(', ');
+                const enriched: LocationModel = {
+                  ...immediateLocation,
+                  name: suggestion.name,
+                  city: suggestion.city || suggestion.name,
+                  region: stateName,
+                  state: stateName,
+                  country: suggestion.country,
+                  countryCode: suggestion.countryCode,
+                  displayName,
+                };
+                applyLocation(enriched, false);
+
+                // Save in background
+                LocationService.getOrCreateLocation(enriched).catch(() => null);
+              }
+            } catch {
+              // Retain immediate location
+            }
+          }
+          return;
         }
-        return;
       }
 
-      const lat = parseFloat(urlLat);
-      const lng = parseFloat(urlLng);
-
-      if (isNaN(lat) || isNaN(lng)) {
-        setError('Invalid coordinates in URL.');
+      // Case 2: No coordinates in URL -> check in-memory state or local storage
+      if (selectedLocation) {
+        applyLocation(selectedLocation, true);
+        setLoading(false);
         return;
       }
-
-      // Skip if already matching current selection
-      if (
-        selectedLocation &&
-        Math.abs(selectedLocation.latitude - lat) < 0.0001 &&
-        Math.abs(selectedLocation.longitude - lng) < 0.0001
-      ) {
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
 
       try {
-        // 1. Resolve details via reverse geocode
-        const revResponse = await apiClient.get('/locations/reverse', {
-          params: { lat, lng }
-        });
-        const resolvedLoc = revResponse.data.data;
-
-        // 2. Persist/get location record in Supabase
-        const dbResponse = await apiClient.post('/locations', resolvedLoc);
-        setSelectedLocation(dbResponse.data.data);
-      } catch (err: any) {
-        console.error('[LocationContext] Failed to load location from URL:', err);
-        setError(err.message || 'Failed to load selected location.');
-        setSelectedLocation(null);
-      } finally {
-        setLoading(false);
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
+            applyLocation(parsed, true);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Ignore parsing errors
       }
+
+      setSelectedLocation(null);
+      setError(null);
+      setLoading(false);
     };
 
-    // Avoid running twice in React StrictMode if already run
-    if (!initRef.current || (urlLat !== selectedLocation?.latitude?.toString() || urlLng !== selectedLocation?.longitude?.toString())) {
-      initRef.current = true;
-      loadFromUrl();
-    }
-  }, [urlLat, urlLng]);
+    initializeLocation();
+  }, [urlLat, urlLng, urlName, applyLocation]);
 
-  const selectLocation = async (locationData: Omit<LocationModel, 'id'>) => {
+  /**
+   * Select and persist a location chosen by the user.
+   */
+  const selectLocation = async (locationData: Omit<LocationModel, 'id'> & { id?: string }) => {
     setLoading(true);
     setError(null);
 
+    const detId = locationData.id || `loc-${locationData.latitude.toFixed(4)}-${locationData.longitude.toFixed(4)}`;
+    const stateName = locationData.state || locationData.region;
+    
+    // Clean, canonical single name and single displayName
+    const baseName = locationData.name.split(',')[0].trim();
+    const rawDisplayName = locationData.displayName || [baseName, stateName, locationData.country].filter(Boolean).join(', ');
+    const parts = rawDisplayName.split(',').map(p => p.trim()).filter(Boolean);
+    const displayName = parts.filter((val, idx) => parts.indexOf(val) === idx).join(', ');
+
+    const immediateLoc: LocationModel = {
+      id: detId,
+      name: baseName,
+      city: locationData.city ? locationData.city.split(',')[0].trim() : baseName,
+      region: stateName,
+      state: stateName,
+      country: locationData.country,
+      countryCode: locationData.countryCode,
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      timezone: locationData.timezone,
+      displayName,
+    };
+
+    // Immediately update global state & URL so map, weather, overview, timeline, risk update without delay
+    applyLocation(immediateLoc, true);
+    setLoading(false);
+
+    // Save in background if possible
     try {
-      // Persist in Supabase through backend
-      const dbResponse = await apiClient.post('/locations', locationData);
-      const finalLocation = dbResponse.data.data;
-
-      setSelectedLocation(finalLocation);
-
-      // Update URL search parameters
-      setSearchParams({
-        lat: finalLocation?.latitude?.toString() || '',
-        lng: finalLocation?.longitude?.toString() || ''
-      });
-    } catch (err: any) {
-      console.error('[LocationContext] Select location failed:', err);
-      setError(err.message || 'Failed to select location.');
-      setSelectedLocation(null);
-    } finally {
-      setLoading(false);
+      await LocationService.getOrCreateLocation(immediateLoc);
+    } catch {
+      // Ignored
     }
   };
 
   const clearLocation = () => {
     setSelectedLocation(null);
     setError(null);
-    setSearchParams({});
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('lat');
+        next.delete('lng');
+        next.delete('name');
+        return next;
+      },
+      { replace: true }
+    );
   };
 
   return (
@@ -117,7 +250,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         loading,
         error,
         selectLocation,
-        clearLocation
+        clearLocation,
+        formatLocationName,
       }}
     >
       {children}

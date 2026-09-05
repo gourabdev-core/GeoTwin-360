@@ -3,11 +3,13 @@ export interface LocationContext {
   name: string;
   city?: string;
   region?: string;
+  state?: string;
   country: string;
   countryCode?: string;
   latitude: number;
   longitude: number;
   timezone?: string;
+  displayName?: string;
 }
 
 export type RiskLevel = 'VERY_HIGH' | 'HIGH' | 'MEDIUM' | 'LOW' | 'VERY_LOW';
@@ -61,30 +63,102 @@ export interface SimulationResult {
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   locationId: string;
   targetYear: number;
+  scenario?: string;
+  scenarioName?: string;
   baseline: {
     temperature: number | null;
+    precipitation?: number | null;
+    heatRisk?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      score: number | null;
+    };
     floodRisk: RiskLevel | 'UNAVAILABLE';
+    floodRiskDetails?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      score: number | null;
+    };
     waterAvailability: number | null;
+    waterStress?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      percentage: number | null;
+      score: number | null;
+    };
+    overallRiskScore?: number;
     airQualityIndex: number | null;
     greenCover: number | null;
     co2Emissions: number | null;
   };
   afterSimulation: {
     temperature: number | null;
+    precipitation?: number | null;
+    heatRisk?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      score: number | null;
+    };
     floodRisk: RiskLevel | 'UNAVAILABLE';
+    floodRiskDetails?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      score: number | null;
+    };
     waterAvailability: number | null;
+    waterStress?: {
+      level: RiskLevel | 'UNAVAILABLE';
+      percentage: number | null;
+      score: number | null;
+    };
+    overallRiskScore?: number;
     airQualityIndex: number | null;
     greenCover: number | null;
     co2Emissions: number | null;
   };
   impact: {
     temperature: number | null;
+    precipitation?: number | null;
+    heatRisk?: {
+      deltaScore: number;
+      fromLevel: string;
+      toLevel: string;
+    };
+    floodRisk?: {
+      deltaScore: number;
+      fromLevel: string;
+      toLevel: string;
+    };
+    waterStress?: {
+      deltaPercentage: number;
+      deltaScore: number;
+      fromLevel: string;
+      toLevel: string;
+    };
+    overallRiskScore?: {
+      before: number;
+      after: number;
+      change: number;
+    };
     waterAvailability: number | null;
     airQualityIndex: number | null;
     greenCover: number | null;
     co2Emissions: number | null;
   };
   sustainabilityScore: SustainabilityScore;
+  provenance?: {
+    engineVersion: string;
+    modelType: string;
+    isOfficialForecast: boolean;
+    disclaimer: string;
+    dataSource: string;
+  };
+}
+
+export interface WeatherForecastPoint {
+  timestamp: string;
+  time: string;
+  temperature: number;
+  feelsLike: number;
+  humidity: number;
+  description: string;
+  icon?: string;
+  windSpeed: number;
 }
 
 export interface WeatherData {
@@ -102,7 +176,11 @@ export interface WeatherData {
   retrievedAt: string;
   icon?: string;
   aqi?: number;
+  sunrise?: string;
+  sunset?: string;
+  forecast?: WeatherForecastPoint[];
 }
+
 
 export interface ClimateMetric {
   id: string;
@@ -136,11 +214,34 @@ export interface AIRecommendation {
   nextStep: string;
 }
 
+export interface AIDataDistinction {
+  suppliedData: string[];
+  calculatedValues: string[];
+  assumptions: string[];
+  recommendations: string[];
+}
+
 export interface AIAdvisorResponse {
+  // 7 Core Generated Outputs
+  climateExplanation: string;
+  mainRisks: string[];
+  riskSignificance: string;
+  recommendedActions: AIRecommendation[];
+  shortTermRecommendations: string[];
+  longTermRecommendations: string[];
+  confidenceLimitations: string;
+
+  // Data Provenance & Distinction
+  dataDistinction?: AIDataDistinction;
+  isFallback?: boolean;
+  fallbackReason?: string;
+
+  // Backward-compatibility aliases
   summary: string;
   keyProblems: string[];
   recommendations: AIRecommendation[];
   interventionPriorities: string[];
+
   model: {
     provider: string;
     name: string;
@@ -148,6 +249,7 @@ export interface AIAdvisorResponse {
   dataContext: {
     locationName: string;
     targetYear: number;
+    scenario?: string;
     hasSimulationData: boolean;
     hasCurrentClimate: boolean;
     hasPredictionData: boolean;

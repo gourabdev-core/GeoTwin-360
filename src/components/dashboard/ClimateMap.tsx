@@ -72,14 +72,13 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   const [activeOverlayDataType, setActiveOverlayDataType] = useState<string | null>(null);
   const [loadingFeatures, setLoadingFeatures] = useState<boolean>(false);
 
-  const [availableLayers, setAvailableLayers] = useState<Record<string, boolean>>({
+  const availableLayers: Record<string, boolean> = {
     temperature: true,
     flood: true,
     aqi: true,
     water: true,
     green: true,
-  });
-  const [checkingAvailability, setCheckingAvailability] = useState<boolean>(false);
+  };
 
   const layers = [
     { id: 'temperature', name: 'Temperature' },
@@ -94,7 +93,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       case 'temperature':
         return metrics?.temperature?.value != null ? `${metrics.temperature.value}°C` : 'Active';
       case 'flood':
-        return floodRiskLevel ? floodRiskLevel.replace('_', ' ') : 'Low';
+        return floodRiskLevel ? floodRiskLevel.replace('_', ' ') : 'Unavailable';
       case 'aqi':
         return metrics?.airQuality?.aqi != null ? `${metrics.airQuality.aqi} AQI` : 'N/A';
       case 'water':
@@ -108,61 +107,6 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     }
   };
 
-  // Fetch availability of spatial overlays on location or year change
-  useEffect(() => {
-    if (!locationId) return;
-
-    let isMounted = true;
-    setCheckingAvailability(true);
-
-    const checkAvailability = async () => {
-      const metricsList = ['temperature', 'flood', 'aqi', 'water', 'green'];
-      const availability: Record<string, boolean> = {
-        temperature: true,
-        flood: true,
-        aqi: true,
-        water: true,
-        green: true,
-      };
-
-      try {
-        await Promise.all(
-          metricsList.map(async (metric) => {
-            let metricParam = metric;
-            if (metric === 'aqi') metricParam = 'air_quality';
-            if (metric === 'water') metricParam = 'water_stress';
-            if (metric === 'green') metricParam = 'green_cover';
-
-            try {
-              const data = await riskService.getRiskMapData(locationId, metricParam, year);
-              if (data && data.features && data.features.length > 0) {
-                availability[metric] = true;
-              }
-            } catch (err) {
-              console.warn(`[ClimateMap] Availability check warning for ${metric}:`, err);
-            }
-          })
-        );
-
-        if (isMounted) {
-          setAvailableLayers(availability);
-          setCheckingAvailability(false);
-        }
-      } catch (err) {
-        console.error('[ClimateMap] Error in availability checks:', err);
-        if (isMounted) {
-          setCheckingAvailability(false);
-        }
-      }
-    };
-
-    checkAvailability();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [locationId, year]);
-
   // Fetch active overlay features when activeOverlay, locationId, or year changes
   useEffect(() => {
     if (!activeOverlay) {
@@ -172,6 +116,8 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     }
 
     let isMounted = true;
+    setOverlayFeatures([]);
+    setActiveOverlayDataType(null);
     setLoadingFeatures(true);
 
     const fetchFeatures = async () => {
@@ -276,13 +222,11 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
           {layers.map((layer) => {
             const isActive = activeOverlay === layer.id;
             const isAvailable = availableLayers[layer.id] ?? true;
-            const badgeText = checkingAvailability
-              ? '...'
-              : isActive
-                ? 'ACTIVE'
-                : isAvailable
-                  ? getFallbackStatus(layer.id)
-                  : 'N/A';
+            const badgeText = isActive
+              ? 'ACTIVE'
+              : isAvailable
+                ? getFallbackStatus(layer.id)
+                : 'N/A';
 
             return (
               <button
@@ -320,8 +264,8 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
         className="w-full h-full min-h-[400px] z-[1]"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Marker position={[parsedLat, parsedLng]} icon={customMarkerIcon}>
           <Popup className="custom-leaflet-popup">
@@ -339,9 +283,9 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
                     heatRiskLevel === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
                     heatRiskLevel === 'LOW' ? 'bg-green-100 text-green-700' :
                     heatRiskLevel === 'VERY_LOW' ? 'bg-emerald-100 text-emerald-700' :
-                    'bg-green-100 text-green-700'
+                    'bg-gray-100 text-gray-700'
                   }`}>
-                    {heatRiskLevel?.replace('_', ' ') || 'Moderate'}
+                    {heatRiskLevel ? heatRiskLevel.replace('_', ' ') : 'Unavailable'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -351,10 +295,10 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
                     floodRiskLevel === 'HIGH' ? 'bg-orange-100 text-orange-700' :
                     floodRiskLevel === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
                     floodRiskLevel === 'LOW' ? 'bg-green-100 text-green-700' :
-                    heatRiskLevel === 'VERY_LOW' ? 'bg-emerald-100 text-emerald-700' :
-                    'bg-green-100 text-green-700'
+                    floodRiskLevel === 'VERY_LOW' ? 'bg-emerald-100 text-emerald-700' :
+                    'bg-gray-100 text-gray-700'
                   }`}>
-                    {floodRiskLevel?.replace('_', ' ') || 'Low'}
+                    {floodRiskLevel ? floodRiskLevel.replace('_', ' ') : 'Unavailable'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-gray-700">

@@ -3,12 +3,23 @@ import path from 'path';
 
 const testFiles = [
   'server/tests/location.test.ts',
+  'server/tests/locationSearchFlow.test.ts',
+  'server/tests/mapExplorerFlow.test.ts',
   'server/tests/weather.test.ts',
   'server/tests/nasaPower.test.ts',
+  'server/tests/nasaGistemp.test.ts',
+  'server/tests/climateDataService.test.ts',
   'server/tests/prediction.test.ts',
+  'server/tests/predictionsModule.test.ts',
   'server/tests/risk.test.ts',
   'server/tests/simulation.test.ts',
+  'server/tests/scenarioSimulator.test.ts',
   'server/tests/reports.test.ts',
+  'server/tests/savedReportsSecurity.test.ts',
+  'server/tests/settingsSecurity.test.ts',
+  'server/tests/advisor.test.ts',
+  'server/tests/resilienceSolutions.test.ts',
+  'server/tests/geminiService.test.ts',
   'server/tests/db.test.ts',
 ];
 
@@ -21,7 +32,10 @@ for (const file of testFiles) {
   console.log(`RUNNING: ${file}`);
   console.log(`============================================================`);
   try {
-    execSync(`npx tsx "${file}"`, { stdio: 'inherit' });
+    execSync(`npx tsx "${file}"`, {
+      stdio: 'inherit',
+      env: { ...process.env, NODE_ENV: 'test' }
+    });
     passed++;
   } catch (err) {
     console.error(`[FAILED] ${file}`);

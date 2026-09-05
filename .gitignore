@@ -1,7 +1,12 @@
 # Environment
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
+.env.development
+.env.production
+
 
 # Dependencies
 node_modules/
@@ -9,6 +14,8 @@ node_modules/
 # Build output
 dist/
 dist-server/
+reports/
+
 
 # Local agent / IDE configuration
 .agents/

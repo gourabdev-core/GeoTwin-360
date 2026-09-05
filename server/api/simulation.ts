@@ -39,8 +39,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       throw err;
     }
 
+    const activeScenario = req.body.scenario ? String(req.body.scenario) : 'default';
+
     // 2. Execute simulation
-    const result = await SimulationService.runSimulation(locationId, targetYear, interventions);
+    const result = await SimulationService.runSimulation(locationId, targetYear, interventions, activeScenario);
 
     // 3. Return response in envelope
     res.json({

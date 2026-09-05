@@ -7,6 +7,8 @@ interface ClimateMetricCardProps {
   unit: string;
   loading: boolean;
   error: string | null;
+  dateOrYear?: string;
+  sourceOrStatus?: string;
 }
 
 export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
@@ -15,6 +17,8 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
   unit,
   loading,
   error,
+  dateOrYear,
+  sourceOrStatus,
 }) => {
   const stringVal = value !== null && value !== undefined ? String(value).trim() : '';
   const isValueUnavailable =
@@ -29,7 +33,7 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
   const fontSizeClass = typeof value === 'string' && value.length > 7 ? 'text-sm' : 'text-xl';
 
   return (
-    <div className="bg-mid-dark p-4 rounded-lg flex flex-col justify-between h-28 hover:bg-dark-card transition-colors duration-200 overflow-hidden">
+    <div className="bg-mid-dark p-3.5 rounded-lg flex flex-col justify-between min-h-[110px] hover:bg-dark-card transition-colors duration-200 overflow-hidden">
       <span className="text-[10px] text-text-silver font-bold uppercase tracking-wider select-none truncate">
         {name}
       </span>
@@ -58,6 +62,13 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
           </div>
         )}
       </div>
+
+      {!loading && !isUnavailable && (dateOrYear || sourceOrStatus) && (
+        <div className="flex items-center justify-between text-[9px] text-text-silver/80 pt-1 border-t border-light-border/10 font-mono select-none">
+          <span className="truncate">{dateOrYear}</span>
+          <span className="truncate text-right">{sourceOrStatus}</span>
+        </div>
+      )}
     </div>
   );
 };

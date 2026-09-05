@@ -1,3 +1,25 @@
+export interface UserPreferences {
+  temperatureUnit: 'celsius' | 'fahrenheit';
+  defaultTargetYear: 2030 | 2035 | 2040 | 2050;
+  defaultScenario: 'baseline' | 'resilience' | 'accelerated';
+  defaultLocationId?: string | null;
+  defaultLocationName?: string | null;
+}
+
+export interface DatabaseProfile {
+  id: string; // UUID (matches auth.users.id)
+  full_name: string;
+  email: string;
+  avatar_url?: string | null;
+  role: string; // e.g. 'Sustainability Lead'
+  organization?: string | null;
+  preferences?: UserPreferences | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Profile = DatabaseProfile;
+
 export interface DatabaseUser {
   id: string; // UUID (matches auth.users.id)
   name: string;
@@ -173,3 +195,63 @@ export interface DatabaseReport {
   expires_at?: string | null;
   created_at: string;
 }
+
+export interface SavedReportMetadata {
+  locationName: string;
+  city?: string | null;
+  region?: string | null;
+  country: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  targetYear: number;
+  scenario: string;
+  climateIndicators: {
+    temperature?: number | null;
+    humidity?: number | null;
+    windSpeed?: number | null;
+    description?: string | null;
+    airQualityIndex?: number | null;
+    airQualityCategory?: string | null;
+    waterAvailability?: number | null;
+    greenCover?: number | null;
+    co2Emissions?: string | null;
+  };
+  riskResults: {
+    heatRiskLevel?: string | null;
+    floodRiskLevel?: string | null;
+    overallRiskScore?: number | null;
+  };
+  resilienceRecommendations: Array<{
+    title: string;
+    priority?: string;
+    reason?: string;
+    targetRisks?: string[];
+    expectedImpact?: string;
+    nextStep?: string;
+  }>;
+  aiSummary?: string | null;
+  simulation?: {
+    sustainabilityScoreBefore?: number | null;
+    sustainabilityScoreAfter?: number | null;
+    sustainabilityScoreImprovement?: number | null;
+    interventions?: string[];
+  };
+}
+
+export interface DatabaseSavedReport {
+  id: string; // UUID
+  user_id: string; // UUID FK
+  location_id?: string | null; // UUID FK
+  scenario_id?: string | null; // UUID FK
+  title: string;
+  summary?: string | null;
+  status: string; // DRAFT, GENERATING, READY, FAILED, ARCHIVED
+  file_url?: string | null;
+  metadata?: SavedReportMetadata | any; // JSONB
+  created_at: string;
+  updated_at: string;
+}
+
+export type SavedReport = DatabaseSavedReport;
