@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../config/supabase.js';
+import { supabase, isConfigured } from '../config/supabase.js';
 import { profileRepository } from '../repositories/profileRepository.js';
 import { DatabaseProfile } from '../types/database.js';
 
@@ -253,6 +253,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async (): Promise<{ success: boolean; error?: string; providerNotConfigured?: boolean }> => {
     setError(null);
     try {
+      if (!isConfigured) {
+        const warning = 'Live Supabase project is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in Vercel Environment Variables.';
+        setError(warning);
+        return { success: false, error: warning, providerNotConfigured: true };
+      }
+
       // 1. Pre-flight check Google OAuth provider configuration
       const status = await checkGoogleStatus();
       if (!status.enabled) {

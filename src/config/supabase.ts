@@ -1,16 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from './env.js';
 
-const isConfigured = Boolean(
+export const isConfigured = Boolean(
   env.supabaseUrl &&
   env.supabaseAnonKey &&
-  env.supabaseUrl.startsWith('http')
+  env.supabaseUrl.startsWith('http') &&
+  !env.supabaseUrl.includes('offline-fallback') &&
+  !env.supabaseUrl.includes('placeholder')
 );
 
 if (!isConfigured) {
   console.warn(
-    '[Supabase Client] WARNING: supabaseUrl or supabaseAnonKey is missing or invalid. ' +
-    'The client will run in safe offline/fallback mode.'
+    '[Supabase Client] WARNING: Real supabaseUrl or supabaseAnonKey is missing. ' +
+    'Live Supabase features will be in offline fallback mode.'
   );
 }
 
