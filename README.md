@@ -26,10 +26,35 @@ GeoTwin 360 is a modern, interactive digital twin dashboard designed for climate
 - **Intervention Reports**: Compiles baseline summaries, intervention impacts, and AI recommendations into a clean PDF.
 - **Offline / Cached Failover**: Implements client-side compiling fallback using `jsPDF` if network connections are lost or external API limits are exceeded.
 
-### 5. Secure Firebase Authentication
-- **Global Auth Observer**: Listens to active user sessions globally using `onAuthStateChanged` mounted at the React DOM body level.
-- **Flexible Providers**: Supports standard Email/Password accounts and Google OAuth redirects.
-- **User Session HUD**: Displays personalized user credentials and Sign Out triggers in the dashboard navigation header.
+### 5. Secure Supabase Authentication & Google OAuth
+- **Global Auth Observer**: Listens to active user sessions globally using `supabase.auth.onAuthStateChange` mounted at the React DOM root level.
+- **Flexible Providers**: Supports standard Email/Password accounts and Google OAuth with automatic user profile and avatar synchronization.
+- **Resilient Pre-Flight Verification**: Gracefully detects unconfigured OAuth providers and offers a one-click local developer/demo session.
+- **User Session Display**: Displays personalized user credentials, Google profile avatars, and Sign Out triggers in the navigation header.
+
+---
+
+## Google OAuth Configuration Guide
+
+To enable live Google Sign-In and Sign-Up for production:
+
+1. **Google Cloud Console**:
+   - Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+   - Create an **OAuth 2.0 Client ID** (Web application).
+   - In **Authorized redirect URIs**, add:
+     ```text
+     https://<YOUR_SUPABASE_PROJECT_ID>.supabase.co/auth/v1/callback
+     ```
+   - Copy the generated **Client ID** and **Client Secret**.
+
+2. **Supabase Dashboard**:
+   - Navigate to **Authentication > Providers > Google** in your Supabase project dashboard.
+   - Toggle **Enable Google provider**.
+   - Paste your **Client ID** and **Client Secret**.
+   - Click **Save**.
+
+3. **In-App Resilient Mode**:
+   - If Google OAuth has not yet been toggled on in Supabase, the app automatically detects this, alerts the user, and provides a **Continue with Google (Demo Account)** button so you can test the full authenticated flow immediately.
 
 ---
 
@@ -37,7 +62,7 @@ GeoTwin 360 is a modern, interactive digital twin dashboard designed for climate
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, Lucide Icons, React-Leaflet, jsPDF
 - **Backend**: Node.js, Express, TypeScript
-- **Services & APIs**: Open-Meteo REST APIs, Google Gemini AI Engine, Supabase Database Client, Firebase Auth SDK
+- **Services & APIs**: OpenWeather API, NASA POWER API, Google Gemini AI Engine, Supabase (PostgreSQL + PostGIS + Auth)
 
 ---
 
@@ -45,7 +70,6 @@ GeoTwin 360 is a modern, interactive digital twin dashboard designed for climate
 
 ### 1. Install Dependencies
 ```bash
-# Install package dependencies
 npm install
 ```
 
@@ -62,11 +86,6 @@ OPENWEATHER_API_KEY=<your-openweather-key>
 
 # GEMINI
 GEMINI_API_KEY=<your-gemini-key>
-
-# FIREBASE CONFIG (Optional fallbacks active if omitted)
-VITE_FIREBASE_API_KEY=<your-firebase-key>
-VITE_FIREBASE_AUTH_DOMAIN=<your-firebase-auth-domain>
-VITE_FIREBASE_PROJECT_ID=<your-firebase-project-id>
 ```
 
 ### 3. Run Development Server

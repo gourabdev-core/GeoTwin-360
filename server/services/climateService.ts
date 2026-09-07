@@ -156,6 +156,7 @@ export class ClimateService {
                   feels_like: liveData.feelsLike,
                   humidity: liveData.humidity,
                   pressure: liveData.pressure,
+                  precipitation: liveData.precipitation,
                   wind_speed: liveData.wind?.speed ?? liveData.windSpeed,
                   wind_direction: liveData.wind?.direction ?? liveData.windDirection,
                   cloudiness: liveData.cloudiness,

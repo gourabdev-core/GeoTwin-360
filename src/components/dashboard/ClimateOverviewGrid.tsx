@@ -11,6 +11,8 @@ interface ClimateOverviewGridProps {
   floodRiskLoading: boolean;
   floodRiskError: string | null;
   heatRiskLevel?: string | null;
+  year?: number;
+  scenario?: string;
 }
 
 export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
@@ -21,6 +23,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
   floodRiskLoading,
   floodRiskError,
   heatRiskLevel,
+  year,
+  scenario,
 }) => {
   const { preferences } = usePreferences();
   // Bind UI directly to live backend payload properties via standard null-chaining
@@ -46,6 +50,26 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
   const co2Value = metrics?.co2Emissions?.value ?? null;
   const co2Unit = metrics?.co2Emissions?.unit ?? '';
 
+  const isFuture = year !== undefined && year > 2026;
+  const tempYearLabel = isFuture ? `${year} Projected` : '2026 Observed';
+  const tempSourceLabel = isFuture ? 'NASA POWER OLS' : 'NASA / Open-Meteo';
+
+  const floodYearLabel = isFuture ? `${year} Projected` : 'Current';
+  const floodSourceLabel = isFuture ? 'Hydrologic Model' : 'Hydrologic Model';
+
+  const waterYearLabel = isFuture ? `${year} Scenario` : 'Live Telemetry';
+  const waterSourceLabel = isFuture ? 'IPCC SSP Model' : 'Open-Meteo Telemetry';
+
+  const aqiYearLabel = isFuture ? `${year} Scenario` : 'Live Telemetry';
+  const aqiSourceLabel = isFuture ? 'CAMS Projection' : 'Open-Meteo Telemetry';
+
+  const greenYearLabel = isFuture ? `${year} Target` : 'Current';
+  const greenSourceLabel = isFuture ? 'Urban Canopy Model' : 'Sentinel-2 Telemetry';
+
+  const scenarioTitle = scenario ? scenario.charAt(0).toUpperCase() + scenario.slice(1) : 'Scenario';
+  const co2YearLabel = isFuture ? `${year} ${scenarioTitle}` : 'vs 2025 Baseline';
+  const co2SourceLabel = isFuture ? `${scenarioTitle} Trajectory` : 'Regional Inventory';
+
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* 1. Average Temperature */}
@@ -55,8 +79,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={`${tempUnit}${heatIndicator}`}
         loading={loading}
         error={error}
-        dateOrYear="2026 YTD"
-        sourceOrStatus="NASA / Open-Meteo"
+        dateOrYear={tempYearLabel}
+        sourceOrStatus={tempSourceLabel}
       />
 
       {/* 2. Flood Risk */}
@@ -66,8 +90,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit=""
         loading={floodRiskLoading}
         error={floodRiskError}
-        dateOrYear="Current"
-        sourceOrStatus="Hydrologic Model"
+        dateOrYear={floodYearLabel}
+        sourceOrStatus={floodSourceLabel}
       />
 
       {/* 3. Water Availability */}
@@ -77,8 +101,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={waterUnit}
         loading={loading}
         error={error}
-        dateOrYear="2026 Active"
-        sourceOrStatus="Open-Meteo Telemetry"
+        dateOrYear={waterYearLabel}
+        sourceOrStatus={waterSourceLabel}
       />
 
       {/* 4. Air Quality */}
@@ -88,8 +112,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={aqiUnit}
         loading={loading}
         error={error}
-        dateOrYear="Live Telemetry"
-        sourceOrStatus="Open-Meteo Telemetry"
+        dateOrYear={aqiYearLabel}
+        sourceOrStatus={aqiSourceLabel}
       />
 
       {/* 5. Green Cover */}
@@ -99,8 +123,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={greenUnit}
         loading={loading}
         error={error}
-        dateOrYear="Current"
-        sourceOrStatus="Sentinel-2 Telemetry"
+        dateOrYear={greenYearLabel}
+        sourceOrStatus={greenSourceLabel}
       />
 
       {/* 6. CO2 Emissions */}
@@ -110,8 +134,8 @@ export const ClimateOverviewGrid: React.FC<ClimateOverviewGridProps> = ({
         unit={co2Unit}
         loading={loading}
         error={error}
-        dateOrYear="vs 2025 Baseline"
-        sourceOrStatus="Regional Inventory"
+        dateOrYear={co2YearLabel}
+        sourceOrStatus={co2SourceLabel}
       />
     </div>
   );

@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
@@ -18,6 +19,7 @@ import {
 import { Card } from '../../components/ui/Card.js';
 import { useLocation } from '../../context/LocationContext.js';
 import { LocationService } from '../../services/locationService.js';
+import { riskService } from '../../services/riskService.js';
 import { sanitizeErrorMessage } from '../../utils/errorSanitizer.js';
 
 // Map Controller to smoothly adjust view and handle resize without reinitializing the map
@@ -84,6 +86,114 @@ const pendingMarkerIcon = L.divIcon({
 
 export const MapPage: React.FC = () => {
   const { selectedLocation, selectLocation, formatLocationName } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedYear, setSelectedYearState] = useState<number>(() => {
+    const param = searchParams.get('year');
+    if (param) {
+      const parsed = parseInt(param, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+    }
+    try {
+      const stored = localStorage.getItem('geotwin_selected_year');
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return 2035;
+  });
+
+  const setSelectedYear = useCallback((year: number) => {
+    setSelectedYearState(year);
+    try {
+      localStorage.setItem('geotwin_selected_year', String(year));
+    } catch {
+      // Ignore
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('year', String(year));
+        return next;
+      },
+      { replace: true }
+    );
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    const paramYear = searchParams.get('year');
+    if (paramYear) {
+      const parsed = parseInt(paramYear, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed) && parsed !== selectedYear) {
+        setSelectedYearState(parsed);
+      }
+    }
+  }, [searchParams, selectedYear]);
+
+  // Risk Overlays state
+  const [activeRiskOverlay, setActiveRiskOverlay] = useState<string | null>('temperature');
+  const [overlayFeatures, setOverlayFeatures] = useState<any[]>([]);
+  const [loadingOverlay, setLoadingOverlay] = useState<boolean>(false);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+        } catch {
+          // Ignore
+        }
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  const riskLayers = [
+    { id: 'temperature', name: 'Heat Risk' },
+    { id: 'flood', name: 'Flood Risk' },
+    { id: 'aqi', name: 'Air Quality' },
+    { id: 'water', name: 'Water Stress' },
+    { id: 'green', name: 'Green Cover' },
+  ];
+
+  // Fetch risk overlay features
+  useEffect(() => {
+    if (!activeRiskOverlay || !selectedLocation?.id) {
+      setOverlayFeatures([]);
+      return;
+    }
+
+    let isMounted = true;
+    setOverlayFeatures([]);
+    setLoadingOverlay(true);
+
+    let metricParam = activeRiskOverlay;
+    if (activeRiskOverlay === 'aqi') metricParam = 'air_quality';
+    if (activeRiskOverlay === 'water') metricParam = 'water_stress';
+    if (activeRiskOverlay === 'green') metricParam = 'green_cover';
+
+    riskService.getRiskMapData(selectedLocation.id, metricParam, selectedYear)
+      .then((data) => {
+        if (isMounted) {
+          setOverlayFeatures(data?.features || []);
+        }
+      })
+      .catch((err) => {
+        console.warn('[MapPage] Risk overlay fetch error:', err);
+        if (isMounted) setOverlayFeatures([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingOverlay(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeRiskOverlay, selectedLocation?.id, selectedYear]);
 
   const [mapData, setMapData] = useState<{
     temperature: number | null;
@@ -114,6 +224,7 @@ export const MapPage: React.FC = () => {
 
   // Fetch real-time environmental data for selected coordinates
   const fetchEnvironmentalData = useCallback(async (latitude: number, longitude: number) => {
+    setMapData(null);
     setLoadingMetrics(true);
     setMetricsError(null);
 
@@ -252,8 +363,26 @@ export const MapPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Location Status Badge */}
-        <div className="flex items-center space-x-2">
+        {/* Year Selector & Location Status Badge */}
+        <div className="flex flex-wrap items-center gap-3">
+          {selectedLocation && (
+            <div className="flex bg-mid-dark p-1 rounded-full border border-border-gray/50">
+              {[2030, 2035, 2040, 2050].map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => setSelectedYear(yr)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 ${
+                    selectedYear === yr
+                      ? 'bg-spotify-green text-black shadow-sm'
+                      : 'text-text-silver hover:text-text-base'
+                  }`}
+                >
+                  {yr}
+                </button>
+              ))}
+            </div>
+          )}
+
           {selectedLocation ? (
             <div className="flex items-center space-x-2 bg-mid-dark border border-border-gray/50 px-3.5 py-1.5 rounded-full text-xs">
               <MapPin size={14} className="text-spotify-green shrink-0" />
@@ -276,7 +405,7 @@ export const MapPage: React.FC = () => {
       {/* Main Map Container */}
       <div className="relative rounded-lg overflow-hidden border border-border-gray bg-mid-dark min-h-[580px] flex flex-col">
         {/* Layer Controls Bar (Top Left) */}
-        <div className="absolute top-3 left-3 z-[1000] flex flex-col space-y-2 p-2.5 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md">
+        <div className="absolute top-3 left-3 z-[1000] flex flex-col space-y-2.5 p-2.5 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md max-w-[200px]">
           <div className="flex items-center space-x-1.5 text-[10px] font-bold text-text-silver uppercase tracking-wider px-1">
             <Layers size={13} className="text-spotify-green" />
             <span>Map Layers</span>
@@ -307,6 +436,36 @@ export const MapPage: React.FC = () => {
               </span>
             </button>
           </div>
+
+          {/* Risk Layer Overlays */}
+          {selectedLocation && (
+            <div className="pt-2 border-t border-border-gray/40 space-y-1.5">
+              <span className="text-[10px] font-bold text-text-silver uppercase tracking-wider block px-1">
+                Risk Overlays ({selectedYear})
+              </span>
+              <div className="grid grid-cols-1 gap-1 text-xs">
+                {riskLayers.map((layer) => {
+                  const isActive = activeRiskOverlay === layer.id;
+                  return (
+                    <button
+                      key={layer.id}
+                      onClick={() => setActiveRiskOverlay(isActive ? null : layer.id)}
+                      className={`text-left px-2 py-1 rounded border flex items-center justify-between gap-1.5 cursor-pointer transition-colors text-xs ${
+                        isActive
+                          ? 'bg-spotify-green/15 border-spotify-green text-spotify-green font-bold'
+                          : 'bg-mid-dark border-border-gray/40 text-text-silver hover:text-text-base'
+                      }`}
+                    >
+                      <span className="text-[11px] truncate">{layer.name}</span>
+                      <span className="text-[9px] font-mono uppercase font-bold">
+                        {isActive ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Live Metrics HUD (Top Right) */}
@@ -400,6 +559,41 @@ export const MapPage: React.FC = () => {
           <div className="absolute bottom-4 left-4 z-[1000] flex items-center space-x-2 bg-dark-surface/95 border border-spotify-green/50 text-spotify-green text-xs px-3.5 py-2 rounded-lg shadow-heavy backdrop-blur-md">
             <Loader2 size={14} className="animate-spin shrink-0" />
             <span>{clickStatusMessage}</span>
+          </div>
+        )}
+
+        {/* Dynamic Risk Legend (Bottom Left when Overlay active) */}
+        {activeRiskOverlay && (
+          <div className={`absolute ${clickStatusMessage ? 'bottom-16' : 'bottom-4'} left-4 z-[1000] flex flex-col space-y-1.5 p-2.5 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md w-[140px]`}>
+            <span className="text-[10px] font-bold text-text-base uppercase tracking-wider px-1 font-sans">
+              {riskLayers.find((l) => l.id === activeRiskOverlay)?.name}
+            </span>
+            {loadingOverlay ? (
+              <span className="text-[10px] text-text-silver font-sans px-1 italic">Loading layer...</span>
+            ) : (
+              <div className="flex flex-col space-y-1 text-[11px] font-sans px-1 pt-1.5 border-t border-border-gray/40">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#f3727f]"></span>
+                  <span className="text-text-silver">Very High</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#ffa42b]"></span>
+                  <span className="text-text-silver">High</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#eed329]"></span>
+                  <span className="text-text-silver">Medium</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#4beb4b]"></span>
+                  <span className="text-text-silver">Low</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-[#539df5]"></span>
+                  <span className="text-text-silver">Very Low</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -497,6 +691,61 @@ export const MapPage: React.FC = () => {
                   </div>
                 </Popup>
               </Circle>
+            )}
+
+            {/* Risk Overlay GeoJSON */}
+            {activeRiskOverlay && overlayFeatures.length > 0 && (
+              <GeoJSON
+                key={`${selectedLocation?.id}-${selectedYear}-${activeRiskOverlay}-${overlayFeatures.length}`}
+                data={{
+                  type: 'FeatureCollection',
+                  features: overlayFeatures,
+                } as any}
+                style={(feature) => {
+                  const level = feature?.properties?.riskLevel;
+                  let color = '#7c7c7c';
+                  if (level === 'VERY_HIGH') color = '#f3727f';
+                  else if (level === 'HIGH') color = '#ffa42b';
+                  else if (level === 'MEDIUM') color = '#eed329';
+                  else if (level === 'LOW') color = '#4beb4b';
+                  else if (level === 'VERY_LOW') color = '#539df5';
+
+                  return {
+                    fillColor: color,
+                    weight: 1.5,
+                    opacity: 0.8,
+                    color: '#121212',
+                    fillOpacity: 0.45,
+                  };
+                }}
+                onEachFeature={(feature, layer) => {
+                  const score = feature?.properties?.riskScore;
+                  const level = feature?.properties?.riskLevel;
+                  const source = feature?.properties?.source;
+                  const dataType = feature?.properties?.metadata?.dataType || feature?.properties?.dataType || 'PROJECTED';
+                  const layerName = riskLayers.find((l) => l.id === activeRiskOverlay)?.name || 'Risk';
+                  if (level) {
+                    const scoreText = typeof score === 'number' && !isNaN(score)
+                      ? `<p><strong>Score:</strong> ${(score <= 1 ? score * 100 : score).toFixed(1)}/100</p>`
+                      : '';
+                    const levelColor = level === 'VERY_HIGH' ? '#dc2626' :
+                      level === 'HIGH' ? '#ea580c' :
+                      level === 'MEDIUM' ? '#ca8a04' :
+                      level === 'LOW' ? '#16a34a' : '#2563eb';
+                    layer.bindPopup(`
+                      <div class="text-near-black p-1 bg-white font-sans rounded">
+                        <h4 class="font-bold text-xs mb-0.5">${layerName} Zone</h4>
+                        <div class="text-[11px] space-y-1">
+                          <p><strong>Level:</strong> <span style="font-weight: bold; color: ${levelColor}">${level.replace('_', ' ')}</span></p>
+                          ${scoreText}
+                          <p><strong>Source:</strong> ${source || 'GeoTwin Models'}</p>
+                          <p><strong>Status:</strong> ${dataType}</p>
+                        </div>
+                      </div>
+                    `);
+                  }
+                }}
+              />
             )}
 
             <MapController lat={lat} lng={lng} />

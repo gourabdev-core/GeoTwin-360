@@ -12,6 +12,8 @@
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist-server/index.js",
     "preview": "vite preview",
+    "type-check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "lint": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "npx tsx server/tests/runAll.ts"
   },
   "dependencies": {
@@ -53,5 +55,14 @@
   },
   "ts-node": {
     "project": "tsconfig.server.json"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "@google/genai",
+      "core-js",
+      "esbuild",
+      "protobufjs"
+    ]
   }
 }

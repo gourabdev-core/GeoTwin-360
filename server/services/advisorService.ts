@@ -1,4 +1,5 @@
 import { GeminiService } from './geminiService.js';
+import { GeminiSafetyGuard } from './geminiSafetyGuard.js';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { ClimateService } from './climateService.js';
@@ -18,6 +19,7 @@ import type { ScenarioType } from '../types/prediction.js';
  * Strict Rules:
  * - Gemini NEVER invents numerical climate measurements or risk figures.
  * - Gemini receives only structured, verified environmental facts.
+ * - Real API calls are strictly guarded by Zero-Quota architecture.
  * - Zero private user information is ever sent to Gemini.
  * - Output must strictly distinguish:
  *     1. Supplied Data (satellite & telemetry observations)
@@ -58,6 +60,8 @@ export interface AIAdvisorResponse {
   dataDistinction: AIDataDistinction;
   isFallback: boolean;
   fallbackReason?: string;
+  analysisType: 'AI_GENERATED' | 'SYSTEM_MODEL_BASED' | 'MOCKED_AI';
+  errorCode?: string;
 
   // Backward-compatibility aliases
   summary: string;
@@ -129,7 +133,7 @@ export interface ClimateContext {
   } | null;
 }
 
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 // Strict Zod schema for structured Gemini output validation
 const advisorResponseZodSchema = z.object({
@@ -214,7 +218,7 @@ export class AdvisorService {
       console.warn('[AdvisorService] Current climate data unavailable:', err.message);
     }
 
-    // 2. Historical data (NASA POWER 10-year satellite baseline 2015-2024)
+    // 2. Historical data (NASA POWER satellite baseline 2015-2025)
     try {
       const historical = await ClimateService.getHistoricalClimate(locationId);
       if (historical && historical.length > 0) {
@@ -334,16 +338,17 @@ export class AdvisorService {
       'You are the GeoTwin 360 Climate Intelligence & Resilience Reasoning Engine.',
       'Your role is to provide rigorous, qualitative climate interpretation, risk synthesis, and urban decision support based strictly on verified scientific data.',
       '',
-      'CRITICAL RULES:',
-      '1. NEVER invent, fabricate, or hallucinate numerical climate measurements, risk scores, or statistics. Use ONLY the verified data supplied in the context below.',
-      '2. If a specific metric is marked "Unavailable", state clearly that data is unavailable. Never fill in imaginary numbers.',
-      '3. You MUST explicitly distinguish between:',
+      'CRITICAL RULES & SCIENTIFIC GUARDRAILS:',
+      '1. NEVER invent, fabricate, or hallucinate numerical climate measurements, risk scores, climate statistics, NASA observations, numerical predictions, or scientific sources/citations. Use ONLY the verified data supplied in the context below.',
+      '2. If a specific metric is marked "Unavailable", state clearly that data is unavailable. Never fill in imaginary numbers or synthetic citations.',
+      '3. You are strictly an EXPLANATION & DECISION-SUPPORT LAYER. Summarize, synthesize, and contextualize verified application facts without modifying numbers or inventing new measurements.',
+      '4. You MUST explicitly distinguish between:',
       '   - SUPPLIED DATA: Real measured values from sensor telemetry and NASA satellite observations.',
       '   - CALCULATED VALUES: Derived OLS regression trends, temperature anomalies, and multi-hazard composite vulnerability scores.',
       '   - ASSUMPTIONS: Socioeconomic pathway assumptions associated with the selected scenario.',
       '   - RECOMMENDATIONS: Decision-support actions for municipal planners and asset owners.',
-      '4. ABSOLUTELY NO EMOJIS OR UNICODE ICONS anywhere in your response.',
-      '5. Output MUST be valid JSON adhering exactly to the requested schema.',
+      '5. ABSOLUTELY NO EMOJIS OR UNICODE ICONS anywhere in your response.',
+      '6. Output MUST be valid JSON adhering exactly to the requested schema.',
     ].join('\n');
 
     const dataSections: string[] = [];
@@ -365,7 +370,7 @@ export class AdvisorService {
     }
 
     if (context.historicalData && context.historicalData.length > 0) {
-      dataSections.push('  - NASA POWER 10-Year Satellite Baseline (2015-2024):');
+      dataSections.push('  - NASA POWER Satellite Baseline (2015-2025):');
       for (const h of context.historicalData) {
         const temp = h.temperature !== null ? `${h.temperature.toFixed(1)}°C` : 'N/A';
         const precip = h.precipitation !== null ? `${h.precipitation.toFixed(1)} mm/day` : 'N/A';
@@ -478,7 +483,8 @@ export class AdvisorService {
    */
   public static buildDeterministicFallback(
     context: ClimateContext,
-    reason: string = 'Gemini API temporarily unavailable or quota limit reached.'
+    reason: string = 'Gemini API temporarily unavailable or quota limit reached.',
+    errorCode?: string
   ): AIAdvisorResponse {
     const isHeatElevated =
       context.risks.heat?.level === 'HIGH' ||
@@ -493,7 +499,7 @@ export class AdvisorService {
     const anomVal = context.predictions?.anomaly ?? 0.8;
     const anomSign = anomVal >= 0 ? '+' : '';
 
-    const climateExplanation = `For ${context.locationName}, climate observations and linear extrapolation indicate projected temperatures around ${tempVal.toFixed(1)}°C by ${context.targetYear} (${anomSign}${anomVal.toFixed(1)}°C shift relative to the 2015-2024 satellite baseline). Under the ${context.scenario.name}, ${context.risks.composite?.primaryDriver || 'thermal and hydrological variations'} constitute the predominant localized stressors.`;
+    const climateExplanation = `For ${context.locationName}, climate observations and linear extrapolation indicate projected temperatures around ${tempVal.toFixed(1)}°C by ${context.targetYear} (${anomSign}${anomVal.toFixed(1)}°C shift relative to the 2015-2025 satellite baseline [MODELED / LINEAR EXTRAPOLATION]). Under the ${context.scenario.name}, ${context.risks.composite?.primaryDriver || 'thermal and hydrological variations'} constitute the predominant localized stressors.`;
 
     const mainRisks: string[] = [];
     if (isHeatElevated) {
@@ -549,15 +555,15 @@ export class AdvisorService {
       'Develop regional green infrastructure corridors connecting urban parks to enhance biodiversity and microclimate stabilization through 2050.',
     ];
 
-    const confidenceLimitations = `Analysis derived from 10-year NASA POWER satellite baseline (2015-2024) and Open-Meteo telemetry with linear regression extrapolation. Local microclimatic conditions may vary depending on municipal zoning changes and regional topography.`;
+    const confidenceLimitations = `Analysis derived from 11-year NASA POWER satellite baseline (2015-2025) and Open-Meteo telemetry with linear regression extrapolation [MODELED / LINEAR EXTRAPOLATION]. Local microclimatic conditions may vary depending on municipal zoning changes and regional topography.`;
 
     const dataDistinction: AIDataDistinction = {
       suppliedData: [
         `Live weather telemetry (Temp: ${context.currentClimate?.temperature ?? 'N/A'}°C, AQI: ${context.currentClimate?.aqi ?? 'N/A'})`,
-        `10-year NASA POWER satellite records (2015-2024 annual observations)`,
+        `11-year NASA POWER satellite records (2015-2025 annual observations)`,
       ],
       calculatedValues: [
-        `OLS linear regression projection for ${context.targetYear} (${anomSign}${anomVal.toFixed(1)}°C anomaly)`,
+        `MODELED / LINEAR EXTRAPOLATION projection for ${context.targetYear} (${anomSign}${anomVal.toFixed(1)}°C anomaly)`,
         `Multi-hazard composite vulnerability rating (${context.risks.composite?.level ?? 'MODERATE'})`,
       ],
       assumptions: [
@@ -581,7 +587,9 @@ export class AdvisorService {
       confidenceLimitations,
       dataDistinction,
       isFallback: true,
+      analysisType: 'SYSTEM_MODEL_BASED',
       fallbackReason: reason,
+      errorCode,
       summary: climateExplanation,
       keyProblems: mainRisks,
       recommendations: recommendedActions,
@@ -609,15 +617,29 @@ export class AdvisorService {
     locationId: string,
     targetYear: number,
     scenarioName: string = 'default',
-    simulationId?: string
+    simulationId?: string,
+    mode: 'ai' | 'deterministic' = 'ai'
   ): Promise<AIAdvisorResponse> {
     // 1. Gather all verified context
     const context = await this.gatherContext(locationId, targetYear, scenarioName, simulationId);
 
-    // If GEMINI_API_KEY is not configured or in test mode, return deterministic fallback immediately
+    // If explicit deterministic mode requested by user/workflow, skip Gemini entirely
+    if (mode === 'deterministic') {
+      return this.buildDeterministicFallback(
+        context,
+        'Deterministic assessment mode requested by user.',
+        'DETERMINISTIC_MODE_REQUESTED'
+      );
+    }
+
+    // If GEMINI_API_KEY is not configured, return deterministic fallback immediately
     if (!env.GEMINI_API_KEY) {
       console.log('[AdvisorService] GEMINI_API_KEY not configured. Generating deterministic fallback...');
-      return this.buildDeterministicFallback(context, 'Gemini API key is not configured. Running in deterministic mode.');
+      return this.buildDeterministicFallback(
+        context,
+        'Gemini API key is not configured on the server. Operating in deterministic ground-truth mode.',
+        'GEMINI_NOT_CONFIGURED'
+      );
     }
 
     // 2. Build prompt
@@ -658,6 +680,11 @@ export class AdvisorService {
         nextStep: String(rec.nextStep),
       }));
 
+      const currentMode = GeminiSafetyGuard.getOperationalMode();
+      const isMock = GeminiService.isMockMode() || currentMode === 'TEST_MODE';
+      const analysisType: 'AI_GENERATED' | 'MOCKED_AI' = isMock ? 'MOCKED_AI' : 'AI_GENERATED';
+      const providerName = isMock ? 'Mock Gemini Provider' : 'Google';
+
       return {
         climateExplanation: validated.climateExplanation,
         mainRisks: validated.mainRisks,
@@ -668,6 +695,7 @@ export class AdvisorService {
         confidenceLimitations: validated.confidenceLimitations,
         dataDistinction: validated.dataDistinction,
         isFallback: false,
+        analysisType,
         summary: validated.climateExplanation,
         keyProblems: validated.mainRisks,
         recommendations,
@@ -676,8 +704,8 @@ export class AdvisorService {
           ...validated.longTermRecommendations,
         ],
         model: {
-          provider: 'Google',
-          name: GEMINI_MODEL,
+          provider: providerName,
+          name: isMock ? `${GEMINI_MODEL} (Simulated)` : GEMINI_MODEL,
         },
         dataContext: {
           locationName: context.locationName,
@@ -691,13 +719,22 @@ export class AdvisorService {
       };
     } catch (err: any) {
       console.warn('[AdvisorService] Gemini reasoning unavailable or failed:', err.message || err);
-      const fallbackReason = err?.code === 'GEMINI_DAILY_QUOTA_EXCEEDED'
+      const classifiedCode = err?.code || 'GEMINI_UNKNOWN_ERROR';
+      const fallbackReason = classifiedCode === 'GEMINI_CALL_BLOCKED'
+        ? 'Gemini live requests are disabled by the Zero-Accidental-Quota Safety Guard. Showing domain-grounded deterministic assessment.'
+        : classifiedCode === 'GEMINI_DAILY_QUOTA_EXCEEDED'
         ? 'AI analysis is temporarily unavailable. Your daily AI quota has been reached. Core GeoTwin features remain available.'
-        : err?.code === 'GEMINI_RATE_LIMIT_EXCEEDED'
+        : classifiedCode === 'GEMINI_SERVICE_UNAVAILABLE' || classifiedCode === 'GEMINI_SERVER_ERROR'
+        ? 'Gemini AI reasoning service is temporarily unavailable. Showing domain-grounded deterministic assessment.'
+        : classifiedCode === 'GEMINI_INVALID_KEY' || classifiedCode === 'GEMINI_NOT_CONFIGURED'
+        ? 'Gemini API authentication failed or key is missing. Showing domain-grounded deterministic assessment.'
+        : classifiedCode === 'GEMINI_RATE_LIMIT_EXCEEDED'
         ? 'AI rate limit reached. Showing domain-grounded deterministic assessment.'
-        : 'Gemini API free-tier quota exceeded. Showing domain-grounded deterministic assessment.';
+        : classifiedCode === 'GEMINI_NETWORK_ERROR'
+        ? 'AI service is unreachable due to network connectivity. Showing domain-grounded deterministic assessment.'
+        : 'AI service temporarily unavailable. Showing domain-grounded deterministic assessment.';
 
-      return this.buildDeterministicFallback(context, fallbackReason);
+      return this.buildDeterministicFallback(context, fallbackReason, classifiedCode);
     }
   }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Wind, Droplets, Sunrise, Sunset, Clock } from 'lucide-react';
+import { Sun, Wind, Droplets, CloudRain, Sunrise, Sunset, Clock } from 'lucide-react';
 import { Card } from '../ui/Card.js';
 import { Skeleton } from '../ui/Skeleton.js';
 import { DataStatus } from '../ui/DataStatus.js';
@@ -103,7 +103,11 @@ export const WeatherOverviewCard: React.FC<WeatherOverviewCardProps> = ({
               </span>
             </div>
           </div>
-          <div className="flex space-x-4 text-xs text-text-silver font-sans">
+          <div className="flex space-x-3 text-xs text-text-silver font-sans">
+            <div className="flex items-center space-x-1" title="Precipitation">
+              <CloudRain size={14} className="text-light-border" />
+              <span>{weather.precipitation !== undefined && weather.precipitation !== null ? `${weather.precipitation} mm` : '0 mm'}</span>
+            </div>
             <div className="flex items-center space-x-1" title="Humidity">
               <Droplets size={14} className="text-light-border" />
               <span>{weather.humidity}%</span>

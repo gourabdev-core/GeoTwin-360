@@ -3,6 +3,8 @@ import { WeatherService } from '../services/weatherService.js';
 import { supabase } from '../config/supabase.js';
 import { env } from '../config/env.js';
 
+process.env.NODE_ENV = 'test';
+
 async function runTests() {
   console.log('[Test Suite] Starting Weather Service & Caching Tests...');
 
@@ -79,6 +81,8 @@ async function runTests() {
     assert.strictEqual(typeof weather1.feelsLike, 'number', 'FeelsLike must be a number.');
     assert.strictEqual(typeof weather1.humidity, 'number', 'Humidity must be a number.');
     assert.strictEqual(typeof weather1.pressure, 'number', 'Pressure must be a number.');
+    assert.ok(weather1.precipitation !== undefined, 'Precipitation must be defined.');
+    assert.strictEqual(typeof weather1.precipitation, 'number', 'Precipitation must be a number.');
     assert.strictEqual(typeof weather1.windSpeed, 'number', 'WindSpeed must be a number.');
     assert.strictEqual(typeof weather1.windDirection, 'number', 'WindDirection must be a number.');
     assert.strictEqual(typeof weather1.cloudiness, 'number', 'Cloudiness must be a number.');

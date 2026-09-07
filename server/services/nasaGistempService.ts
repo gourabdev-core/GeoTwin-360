@@ -1,13 +1,29 @@
 import axios from 'axios';
 
-export type TimelineStatus = 'observed' | 'year_to_date' | 'projected';
+export type TimelineStatus =
+  | 'OBSERVED'
+  | 'CURRENT/YTD'
+  | 'PROJECTED'
+  | 'MODELLED'
+  | 'UNAVAILABLE'
+  | 'observed'
+  | 'year_to_date'
+  | 'projected';
 
 export interface ClimateTimelineDataPoint {
   year: number;
   value: number | null;
   status: TimelineStatus;
   source: string;
+  methodology?: string;
   baseline: string;
+  scenario?: string;
+  location?: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+  };
   updatedAt: string;
   note?: string;
   projectedValue?: number | null;
@@ -41,22 +57,23 @@ export class NasaGistempService {
    * Used when offline or if NASA servers are unreachable.
    */
   private static readonly VERIFIED_SNAPSHOT: ClimateTimelineDataPoint[] = [
-    { year: 2015, value: 0.90, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2016, value: 1.01, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2017, value: 0.92, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2018, value: 0.85, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2019, value: 0.98, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2020, value: 1.01, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2021, value: 0.85, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2022, value: 0.89, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2023, value: 1.17, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2024, value: 1.28, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
-    { year: 2025, value: 1.19, status: 'observed', source: 'NASA GISTEMP v4', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2015, value: 0.90, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2016, value: 1.01, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2017, value: 0.92, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2018, value: 0.85, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2019, value: 0.98, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2020, value: 1.01, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2021, value: 0.85, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2022, value: 0.89, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2023, value: 1.17, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2024, value: 1.28, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
+    { year: 2025, value: 1.19, status: 'OBSERVED', source: 'NASA GISTEMP v4', methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)', baseline: '1951–1980 NASA Baseline', updatedAt: '2026-01-14T00:00:00.000Z' },
     { 
       year: 2026, 
       value: 1.19, 
-      status: 'year_to_date', 
+      status: 'CURRENT/YTD', 
       source: 'NASA GISTEMP v4', 
+      methodology: 'Incomplete Year-to-Date Observation (Jan–Jul Monthly Mean Anomaly)',
       baseline: '1951–1980 NASA Baseline', 
       updatedAt: '2026-08-15T00:00:00.000Z',
       note: '2026: Year-to-date (Jan–Jul monthly mean); annual value not yet complete'
@@ -95,8 +112,9 @@ export class NasaGistempService {
         records.push({
           year,
           value: parseFloat(parseFloat(jdVal).toFixed(2)),
-          status: 'observed',
+          status: 'OBSERVED',
           source: this.SOURCE_NAME,
+          methodology: 'Direct Land-Ocean Surface Temperature Observation (NASA GISS L-OTI)',
           baseline: this.BASELINE,
           updatedAt: nowIso,
         });
@@ -119,8 +137,9 @@ export class NasaGistempService {
           records.push({
             year,
             value: ytdMean,
-            status: 'year_to_date',
+            status: 'CURRENT/YTD',
             source: this.SOURCE_NAME,
+            methodology: `Incomplete Year-to-Date Observation (${monthlyVals.length} months mean anomaly)`,
             baseline: this.BASELINE,
             updatedAt: nowIso,
             note: `${year}: Year-to-date (${monthlyVals.length} months); annual value not yet complete`,
@@ -129,8 +148,9 @@ export class NasaGistempService {
           records.push({
             year,
             value: null,
-            status: 'year_to_date',
+            status: 'CURRENT/YTD',
             source: this.SOURCE_NAME,
+            methodology: 'Incomplete Year-to-Date Observation',
             baseline: this.BASELINE,
             updatedAt: nowIso,
             note: `${year} annual data is not yet complete.`,

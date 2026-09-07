@@ -1,0 +1,228 @@
+/* ──────────────────────────────────────────
+   GeoTwin 360 — Landing Page Styles
+   Scoped styles and animations for the
+   marketing/landing page.
+   ────────────────────────────────────────── */
+
+/* ── Landing Page Design Tokens ── */
+.landing-page {
+  --lp-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --lp-base: #121212;
+  --lp-surface: #181818;
+  --lp-surface-alt: #1f1f1f;
+  --lp-accent: #1ed760;
+  --lp-accent-dark: #1db954;
+  --lp-accent-glow: rgba(30, 215, 96, 0.15);
+  --lp-text-primary: #ffffff;
+  --lp-text-secondary: #b3b3b3;
+  --lp-text-muted: #8a8a8a;
+  --lp-negative: #f3727f;
+  --lp-warning: #ffa42b;
+  --lp-info: #539df5;
+  --lp-success: #1ed760;
+  --lp-card: #252525;
+  --lp-separator: #333333;
+  --lp-shadow-heavy: 0px 8px 24px rgba(0, 0, 0, 0.5);
+  --lp-shadow-medium: 0px 8px 8px rgba(0, 0, 0, 0.3);
+
+  font-family: var(--lp-font);
+  background-color: var(--lp-base);
+  color: var(--lp-text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.landing-page * {
+  box-sizing: border-box;
+}
+
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
+.landing-page h4,
+.landing-page h5,
+.landing-page h6 {
+  margin: 0;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.landing-page p {
+  margin: 0;
+}
+
+.landing-page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-page img {
+  max-width: 100%;
+  display: block;
+}
+
+.landing-page ul,
+.landing-page ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Container ── */
+.lp-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ── Buttons ── */
+.lp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background-color: var(--lp-accent);
+  color: #000000;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.lp-btn-primary:hover {
+  background-color: var(--lp-accent-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(30, 215, 96, 0.3);
+}
+.lp-btn-primary:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+.lp-btn-primary:active {
+  transform: translateY(0);
+}
+
+.lp-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background-color: transparent;
+  color: var(--lp-text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: 1px solid #7c7c7c;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+}
+.lp-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--lp-text-primary);
+  transform: translateY(-1px);
+}
+.lp-btn-secondary:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* ── Eyebrow Label ── */
+.lp-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--lp-accent);
+  margin-bottom: 16px;
+}
+
+/* ── Section Heading ── */
+.lp-section-heading {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--lp-text-primary);
+  line-height: 1.2;
+}
+
+/* ── Card ── */
+.lp-card {
+  background-color: var(--lp-surface);
+  border-radius: 8px;
+  padding: 24px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.lp-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--lp-shadow-medium);
+}
+
+/* ── Animations ── */
+@keyframes lp-fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lp-slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.lp-animate-fade-in-up {
+  animation: lp-fadeInUp 0.7s ease forwards;
+}
+
+.lp-animate-slide-in-right {
+  animation: lp-slideInRight 0.8s ease forwards;
+}
+
+/* ── Scroll Reveal ── */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.lp-reveal.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .lp-animate-fade-in-up,
+  .lp-animate-slide-in-right {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

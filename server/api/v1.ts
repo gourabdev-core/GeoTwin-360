@@ -9,6 +9,7 @@ import advisorRouter from './advisor.js';
 import reportsRouter from './reports.js';
 import solutionsRouter from './solutions.js';
 import profileRouter from './profile.js';
+import authRouter from './auth.js';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get('/health', (_req, res) => {
   });
 });
 
+router.use('/auth', authRouter);
 router.use('/locations', locationsRouter);
 router.use('/location', locationsRouter);
 router.use('/weather', weatherRouter);

@@ -11,6 +11,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().min(1, { message: 'GEMINI_API_KEY is required' }),
   OPENWEATHER_API_KEY: z.string().min(1, { message: 'OPENWEATHER_API_KEY is required' }),
+  LIVE_GEMINI_TEST: z.boolean().default(false),
 });
 
 const getEnv = () => {
@@ -34,6 +35,7 @@ const getEnv = () => {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
     OPENWEATHER_API_KEY: process.env.OPENWEATHER_API_KEY || '',
+    LIVE_GEMINI_TEST: process.env.LIVE_GEMINI_TEST === 'true',
   };
 
   const result = envSchema.safeParse(rawEnv);
@@ -59,6 +61,7 @@ const getEnv = () => {
     SUPABASE_SERVICE_ROLE_KEY: rawEnv.SUPABASE_SERVICE_ROLE_KEY,
     GEMINI_API_KEY: rawEnv.GEMINI_API_KEY,
     OPENWEATHER_API_KEY: rawEnv.OPENWEATHER_API_KEY,
+    LIVE_GEMINI_TEST: rawEnv.LIVE_GEMINI_TEST,
   };
 };
 

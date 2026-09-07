@@ -235,7 +235,12 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     // 6. Call AI Advisor Service with fallback
     let aiAdvisor = null;
     try {
-      const recommendations = await AdvisorService.generateRecommendations(locationId, resolvedYear, finalSimulationRunId);
+      const recommendations = await AdvisorService.generateRecommendations(
+        locationId,
+        resolvedYear,
+        'default',
+        finalSimulationRunId
+      );
       aiAdvisor = {
         summary: recommendations.summary,
         keyProblems: recommendations.keyProblems,

@@ -8,6 +8,7 @@ export interface WeatherData {
   feelsLike: number;
   humidity: number;
   pressure: number;
+  precipitation?: number | null;
   windSpeed: number;
   windDirection: number;
   cloudiness: number;
@@ -114,6 +115,12 @@ export class WeatherService {
       });
     }
 
+    // Extract precipitation from OpenWeather rain/snow/condition observations
+    const rainMm = ow.rain?.['1h'] ?? ow.rain?.['3h'] ?? ow.snow?.['1h'] ?? ow.snow?.['3h'];
+    const precipitation = rainMm !== undefined
+      ? Number(rainMm)
+      : (['Rain', 'Drizzle', 'Thunderstorm'].includes(ow.weather?.[0]?.main) ? 0.5 : 0);
+
     const climateResult: ClimateData = {
       latitude: lat,
       longitude: lng,
@@ -122,7 +129,7 @@ export class WeatherService {
       feelsLike: ow.main.feels_like,
       humidity: ow.main.humidity,
       pressure: ow.main.pressure,
-      precipitation: null,
+      precipitation,
       wind: {
         speed: ow.wind.speed,
         direction: ow.wind.deg || 0,
@@ -171,6 +178,7 @@ export class WeatherService {
       feelsLike: climate.feelsLike ?? 0,
       humidity: climate.humidity ?? 0,
       pressure: climate.pressure ?? 1013,
+      precipitation: climate.precipitation ?? 0,
       windSpeed: climate.wind?.speed ?? climate.windSpeed ?? 0,
       windDirection: climate.wind?.direction ?? climate.windDirection ?? 0,
       cloudiness: climate.cloudiness ?? 0,

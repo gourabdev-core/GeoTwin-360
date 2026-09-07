@@ -103,13 +103,19 @@ export const ScenarioSimulator: React.FC<ScenarioSimulatorProps> = ({
     }
   };
 
+  // Keep ref to onSimulationResult to prevent parent re-renders from triggering resets
+  const onSimulationResultRef = useRef(onSimulationResult);
+  useEffect(() => {
+    onSimulationResultRef.current = onSimulationResult;
+  });
+
   // When location changes: reset interventions and clear simulation
   useEffect(() => {
     setSimulationResult(null);
     setSelectedInterventions(new Set());
     setError(null);
-    onSimulationResult(null);
-  }, [locationId, onSimulationResult]);
+    onSimulationResultRef.current?.(null);
+  }, [locationId]);
 
   // When year or scenario changes: if interventions are selected, immediately update calculated analysis!
   useEffect(() => {
@@ -118,7 +124,7 @@ export const ScenarioSimulator: React.FC<ScenarioSimulatorProps> = ({
     } else {
       setSimulationResult(null);
       setError(null);
-      onSimulationResult(null);
+      onSimulationResultRef.current?.(null);
     }
   }, [year, scenario, locationId]);
 

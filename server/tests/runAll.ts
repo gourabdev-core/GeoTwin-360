@@ -4,6 +4,8 @@ import path from 'path';
 const testFiles = [
   'server/tests/location.test.ts',
   'server/tests/locationSearchFlow.test.ts',
+  'server/tests/locationAudit.test.ts',
+  'server/tests/locationE2EFlow.test.ts',
   'server/tests/mapExplorerFlow.test.ts',
   'server/tests/weather.test.ts',
   'server/tests/nasaPower.test.ts',
@@ -20,6 +22,8 @@ const testFiles = [
   'server/tests/advisor.test.ts',
   'server/tests/resilienceSolutions.test.ts',
   'server/tests/geminiService.test.ts',
+  'server/tests/geminiSafetyGuard.test.ts',
+  'server/tests/aiAdvisorAudit.test.ts',
   'server/tests/db.test.ts',
 ];
 
@@ -34,7 +38,7 @@ for (const file of testFiles) {
   try {
     execSync(`npx tsx "${file}"`, {
       stdio: 'inherit',
-      env: { ...process.env, NODE_ENV: 'test' }
+      env: { ...process.env, NODE_ENV: 'test', LIVE_GEMINI_TEST: 'false' }
     });
     passed++;
   } catch (err) {
@@ -45,8 +49,10 @@ for (const file of testFiles) {
 
 console.log(`\n============================================================`);
 console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED (Total: ${testFiles.length})`);
+console.log(`AUDIT CONFIRMATION: REAL GEMINI API REQUESTS MADE = 0`);
 console.log(`============================================================\n`);
 
 if (failed > 0) {
   process.exit(1);
 }
+

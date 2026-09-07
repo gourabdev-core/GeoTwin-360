@@ -69,20 +69,43 @@ apiClient.interceptors.response.use(
       if (status === 503 && responseData?.error?.code === 'BACKEND_UNAVAILABLE') {
         errorCode = 'BACKEND_UNAVAILABLE';
         errorMessage = 'GeoTwin 360 backend is unreachable on port 3001. Please verify the server is running.';
+      } else if (
+        status === 503 &&
+        (responseData?.error?.code === 'GEMINI_SERVICE_UNAVAILABLE' ||
+          responseData?.error?.code === 'GEMINI_SERVER_ERROR' ||
+          responseData?.error?.code === 'UNAVAILABLE' ||
+          responseData?.error?.code === 'ServiceUnavailable' ||
+          responseData?.error?.message?.toLowerCase().includes('serviceunavailable') ||
+          responseData?.error?.message?.toLowerCase().includes('service unavailable'))
+      ) {
+        errorCode = 'GEMINI_SERVICE_UNAVAILABLE';
+        errorMessage = 'Gemini AI reasoning service is temporarily unavailable. Core GeoTwin features remain fully operational.';
       } else if (status === 429) {
         if (
           responseData?.error?.code === 'GEMINI_DAILY_QUOTA_EXCEEDED' ||
-          responseData?.error?.message?.toLowerCase().includes('daily quota')
+          responseData?.error?.message?.toLowerCase().includes('daily quota') ||
+          responseData?.error?.message?.toLowerCase().includes('generaterequestsperday')
         ) {
           errorCode = 'GEMINI_DAILY_QUOTA_EXCEEDED';
-          errorMessage = 'AI analysis is temporarily unavailable. Your daily AI quota has been reached. Core GeoTwin features remain available.';
+          errorMessage = 'AI analysis is temporarily unavailable because the Gemini daily quota has been reached. Core GeoTwin features remain available.';
         } else {
           errorCode = 'RATE_LIMIT_EXCEEDED';
-          errorMessage = 'Rate limit reached. Intelligent deterministic fallback model active.';
+          errorMessage = 'AI rate limit reached. Intelligent deterministic fallback model active.';
         }
       } else if (status === 401 || status === 403) {
-        errorCode = 'UNAUTHORIZED';
-        errorMessage = 'Authentication required. Please sign in to continue.';
+        if (
+          responseData?.error?.code === 'GEMINI_INVALID_KEY' ||
+          responseData?.error?.code === 'GEMINI_NOT_CONFIGURED'
+        ) {
+          errorCode = responseData.error.code;
+          errorMessage = 'Gemini API authentication failed or key is missing on the server.';
+        } else if (responseData?.error?.code === 'GEMINI_PERMISSION_DENIED') {
+          errorCode = 'GEMINI_PERMISSION_DENIED';
+          errorMessage = 'Gemini API access denied or project billing required.';
+        } else {
+          errorCode = 'UNAUTHORIZED';
+          errorMessage = 'Authentication required. Please sign in to continue.';
+        }
       } else if (status === 404) {
         errorCode = 'NOT_FOUND';
         errorMessage = responseData?.error?.message || 'The requested resource was not found.';
@@ -92,9 +115,21 @@ apiClient.interceptors.response.use(
       } else {
         errorMessage = `Service returned status ${status}. Please try again shortly.`;
       }
-    } else if (error.request || error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+    } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      errorCode = 'TIMEOUT';
+      errorMessage = 'Request timed out. Please try again.';
+    } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      errorCode = 'NETWORK_ERROR';
+      errorMessage = 'Network connection offline. Operating with local data.';
+    } else if (error.code === 'ECONNREFUSED') {
       errorCode = 'BACKEND_UNAVAILABLE';
-      errorMessage = 'Could not connect to the GeoTwin 360 backend. Please ensure the server is running.';
+      errorMessage = 'Could not connect to the GeoTwin 360 backend on port 3001. Please ensure the server is running.';
+    } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      errorCode = 'PROXY_ERROR';
+      errorMessage = 'Network error communicating with the GeoTwin 360 backend proxy. Please verify frontend and backend connectivity.';
+    } else if (error.request) {
+      errorCode = 'NETWORK_ERROR';
+      errorMessage = 'Unable to reach the server. Please check your network connection.';
     } else {
       errorMessage = sanitizeErrorMessage(error.message);
     }

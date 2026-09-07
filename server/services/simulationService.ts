@@ -12,6 +12,7 @@ export interface SimulationResult {
   targetYear: number;
   scenario: string;
   scenarioName: string;
+  interventions?: string[];
   baseline: {
     temperature: number | null;
     precipitation: number | null;
@@ -543,6 +544,7 @@ export class SimulationService {
       targetYear,
       scenario: activeScenario,
       scenarioName: activeScenarioName,
+      interventions: interventionSlugs,
       baseline: {
         temperature: baselineTemp,
         precipitation: baselinePrecip,

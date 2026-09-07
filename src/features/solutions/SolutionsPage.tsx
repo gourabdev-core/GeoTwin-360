@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Award,
   TreePine,
@@ -43,8 +44,93 @@ const CATEGORIES: (ResilienceSolutionCategory | 'All')[] = [
 
 export const SolutionsPage: React.FC = () => {
   const { selectedLocation, loading: locationLoading } = useLocation();
-  const [selectedYear, setSelectedYear] = useState<number>(2035);
-  const [selectedScenario, setSelectedScenario] = useState<ScenarioType>('default');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedYear, setSelectedYearState] = useState<number>(() => {
+    const param = searchParams.get('year');
+    if (param) {
+      const parsed = parseInt(param, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+    }
+    try {
+      const stored = localStorage.getItem('geotwin_selected_year');
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return 2035;
+  });
+
+  const [selectedScenario, setSelectedScenarioState] = useState<ScenarioType>(() => {
+    const param = searchParams.get('scenario') as ScenarioType;
+    if (param && ['default', 'resilience', 'accelerated'].includes(param)) return param;
+    try {
+      const stored = localStorage.getItem('geotwin_selected_scenario') as ScenarioType;
+      if (stored && ['default', 'resilience', 'accelerated'].includes(stored)) return stored;
+    } catch {
+      // Ignore
+    }
+    return 'default';
+  });
+
+  const setSelectedYear = useCallback(
+    (year: number) => {
+      setSelectedYearState(year);
+      try {
+        localStorage.setItem('geotwin_selected_year', String(year));
+      } catch {
+        // Ignore
+      }
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('year', String(year));
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const setSelectedScenario = useCallback(
+    (scenario: ScenarioType) => {
+      setSelectedScenarioState(scenario);
+      try {
+        localStorage.setItem('geotwin_selected_scenario', scenario);
+      } catch {
+        // Ignore
+      }
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('scenario', scenario);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  // Sync external searchParam updates (browser back/forward)
+  useEffect(() => {
+    const paramYear = searchParams.get('year');
+    if (paramYear) {
+      const parsed = parseInt(paramYear, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed) && parsed !== selectedYear) {
+        setSelectedYearState(parsed);
+      }
+    }
+    const paramScenario = searchParams.get('scenario') as ScenarioType;
+    if (paramScenario && ['default', 'resilience', 'accelerated'].includes(paramScenario) && paramScenario !== selectedScenario) {
+      setSelectedScenarioState(paramScenario);
+    }
+  }, [searchParams, selectedYear, selectedScenario]);
+
   const [activeCategory, setActiveCategory] = useState<ResilienceSolutionCategory | 'All'>('All');
 
   const [data, setData] = useState<ResilienceSolutionsResponse | null>(null);
@@ -61,6 +147,7 @@ export const SolutionsPage: React.FC = () => {
       return;
     }
 
+    setData(null);
     setLoading(true);
     setError(null);
 

@@ -41,6 +41,7 @@ export const WeatherProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const reqId = ++activeReqIdRef.current;
+    setWeather(null);
     setLoading(true);
     setStatus('LOADING');
     setError(null);

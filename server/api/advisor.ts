@@ -15,7 +15,8 @@ const router = Router();
  */
 router.post('/recommendations', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { locationId, targetYear, simulationId, scenario } = req.body;
+    const { locationId, targetYear, simulationId, scenario, mode } = req.body;
+    const requestedMode: 'ai' | 'deterministic' = mode === 'deterministic' ? 'deterministic' : 'ai';
 
     // 1. Validate locationId
     if (!locationId || typeof locationId !== 'string') {
@@ -53,10 +54,11 @@ router.post('/recommendations', async (req: Request, res: Response, next: NextFu
       locationId,
       year,
       scenarioName,
-      simulationId || undefined
+      simulationId || undefined,
+      requestedMode
     );
 
-    // 5. Return response in envelope
+    // 6. Return response in envelope
     res.json({
       data: result,
     });

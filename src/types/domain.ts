@@ -65,6 +65,7 @@ export interface SimulationResult {
   targetYear: number;
   scenario?: string;
   scenarioName?: string;
+  interventions?: string[];
   baseline: {
     temperature: number | null;
     precipitation?: number | null;
@@ -166,6 +167,7 @@ export interface WeatherData {
   feelsLike: number;
   humidity: number;
   pressure: number;
+  precipitation?: number | null;
   windSpeed: number;
   windDirection: number;
   cloudiness: number;
@@ -193,6 +195,7 @@ export interface ClimateMetric {
 export interface RiskMetric {
   metric: string;
   score: number | null;
+  unit?: string;
   level: 'VERY_HIGH' | 'HIGH' | 'MEDIUM' | 'LOW' | 'VERY_LOW' | null;
   type: 'OBSERVED' | 'HISTORICAL' | 'PROJECTED' | 'SIMULATED';
 }
@@ -235,6 +238,8 @@ export interface AIAdvisorResponse {
   dataDistinction?: AIDataDistinction;
   isFallback?: boolean;
   fallbackReason?: string;
+  analysisType?: 'AI_GENERATED' | 'SYSTEM_MODEL_BASED' | 'MOCKED_AI';
+  errorCode?: string;
 
   // Backward-compatibility aliases
   summary: string;

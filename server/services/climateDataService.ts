@@ -11,7 +11,15 @@ export type ClimateIndicatorType =
   | 'sea_ice'
   | 'extreme_heat';
 
-export type TimelineDataStatus = 'observed' | 'year_to_date' | 'projected';
+export type TimelineDataStatus =
+  | 'OBSERVED'
+  | 'CURRENT/YTD'
+  | 'PROJECTED'
+  | 'MODELLED'
+  | 'UNAVAILABLE'
+  | 'observed'
+  | 'year_to_date'
+  | 'projected';
 
 export interface UnifiedClimatePoint {
   year: number;
@@ -20,6 +28,7 @@ export interface UnifiedClimatePoint {
   unit: string;
   status: TimelineDataStatus;
   source: string;
+  methodology: string;
   baseline: string;
   scenario?: string;
   location?: {
@@ -142,9 +151,13 @@ export class ClimateDataService {
           value: p.value,
           indicator: 'temperature',
           unit: '°C',
-          status: p.status,
+          status: p.year === 2026 ? 'CURRENT/YTD' : 'OBSERVED',
           source: 'NASA GISTEMP v4',
+          methodology: p.methodology || (p.year === 2026
+            ? 'Incomplete Year-to-Date Observation (Jan–Jul Monthly Mean Anomaly)'
+            : 'Direct Station and Satellite Instrument Observation (NASA GISS L-OTI)'),
           baseline: '1951–1980 NASA Baseline',
+          scenario: p.year === 2026 ? 'current' : 'observed',
           scope: 'global',
           updatedAt: p.updatedAt,
           note: p.note,
@@ -158,17 +171,18 @@ export class ClimateDataService {
           const val = parseFloat((base2026 + (fYear - 2026) * scenarioRate).toFixed(2));
           return {
             year: fYear,
-            value: null,
+            value: val,
             projectedValue: val,
             indicator: 'temperature',
             unit: '°C',
-            status: 'projected',
+            status: 'PROJECTED',
             source: 'GeoTwin Scenario Projection (CMIP6 / IPCC Radiative Forcing)',
+            methodology: 'MODELED / LINEAR EXTRAPOLATION (IPCC Scenario Radiative Forcing)',
             baseline: '1951–1980 NASA Baseline',
             scenario,
             scope: 'global',
             updatedAt: nowIso,
-            note: `Projected anomaly along ${scenario.toUpperCase()} pathway`,
+            note: `Projected global anomaly along ${scenario.toUpperCase()} pathway (MODELED / LINEAR EXTRAPOLATION; not a NASA observation)`,
           };
         });
 
@@ -182,9 +196,9 @@ export class ClimateDataService {
           baseline: '1951–1980 NASA GISS Baseline',
           description: 'Global Land-Ocean Temperature Index (L-OTI) anomaly relative to 1951–1980.',
           updatedAt: nowIso,
-          disclaimer: 'Historical observations from NASA GISS GISTEMP v4. 2026 is Year-to-Date incomplete. Future years represent modeled climate projections.',
+          disclaimer: 'Historical observations (2015–2025) from NASA GISS GISTEMP v4. 2026 is Year-to-Date incomplete. Future years (2027–2050) represent GeoTwin scenario-modeled projections and are not NASA observations.',
           latestCompletedYear: 2025,
-          currentYearStatus: '2026: Year-to-date; annual value not yet complete',
+          currentYearStatus: '2026: Year-to-date observation (annual value not yet complete)',
           timeline,
           projections,
           combinedTimeline: [...timeline, ...projections],
@@ -225,9 +239,13 @@ export class ClimateDataService {
             value: val,
             indicator: 'precipitation',
             unit: 'mm/day',
-            status: isYtd ? 'year_to_date' : 'observed',
+            status: isYtd ? 'CURRENT/YTD' : 'OBSERVED',
             source: 'NASA POWER Satellite & Open-Meteo Telemetry',
+            methodology: isYtd
+              ? 'Incomplete Year-to-Date Observation (Cumulative Telemetry through August)'
+              : 'Satellite Precipitation Radar & Calibrated Surface Observation (NASA POWER & Open-Meteo)',
             baseline: '2015–2025 Satellite Climatology',
+            scenario: isYtd ? 'current' : 'observed',
             location: loc ? { id: loc.id, name: loc.name, latitude: loc.latitude, longitude: loc.longitude } : undefined,
             scope: loc ? 'local' : 'regional',
             updatedAt: nowIso,
@@ -243,20 +261,22 @@ export class ClimateDataService {
           if (scenario === 'resilience') proj *= 0.96; // Flood retention mitigation
           if (scenario === 'accelerated') proj *= 1.10; // Extreme monsoonal intensification
 
+          const roundedProj = parseFloat(proj.toFixed(2));
           return {
             year: fYear,
-            value: null,
-            projectedValue: parseFloat(proj.toFixed(2)),
+            value: roundedProj,
+            projectedValue: roundedProj,
             indicator: 'precipitation',
             unit: 'mm/day',
-            status: 'projected',
-            source: 'GeoTwin Precipitation Regression & Scenario Modulation',
+            status: 'PROJECTED',
+            source: 'GeoTwin Climate Simulation Engine',
+            methodology: 'MODELED / LINEAR EXTRAPOLATION (Regional Climatology & Scenario Modulation)',
             baseline: '2015–2025 Satellite Climatology',
             scenario,
             location: loc ? { id: loc.id, name: loc.name, latitude: loc.latitude, longitude: loc.longitude } : undefined,
             scope: loc ? 'local' : 'regional',
             updatedAt: nowIso,
-            note: `Projected precipitation under ${scenario.toUpperCase()} scenario`,
+            note: `Projected precipitation under ${scenario.toUpperCase()} scenario (MODELED / LINEAR EXTRAPOLATION)`,
           };
         });
 
@@ -270,9 +290,9 @@ export class ClimateDataService {
           baseline: '2015–2025 Local Satellite Climatology',
           description: loc ? `Location-specific precipitation for ${loc.name} (${loc.latitude.toFixed(4)}°, ${loc.longitude.toFixed(4)}°).` : 'Precipitation measurements from satellite and surface sensors.',
           updatedAt: nowIso,
-          disclaimer: 'Local precipitation telemetry grounded in NASA POWER satellite observations. Not a global average.',
+          disclaimer: 'Local precipitation telemetry grounded in NASA POWER satellite observations (2015–2025). 2026 is Year-to-Date incomplete. Future years represent GeoTwin scenario modeling.',
           latestCompletedYear: 2025,
-          currentYearStatus: '2026: Year-to-date; annual total incomplete',
+          currentYearStatus: '2026: Year-to-date observation (annual total incomplete)',
           timeline,
           projections,
           combinedTimeline: [...timeline, ...projections],
@@ -288,9 +308,13 @@ export class ClimateDataService {
             value: p.value,
             indicator: 'sea_level',
             unit: 'mm',
-            status: isYtd ? 'year_to_date' : 'observed',
+            status: isYtd ? 'CURRENT/YTD' : 'OBSERVED',
             source: 'NASA Sea Level Change / PO.DAAC (Satellite Altimetry)',
+            methodology: isYtd
+              ? 'Incomplete Year-to-Date Satellite Altimetry (Sentinel-6 MF)'
+              : 'Satellite Radar Altimetry (TOPEX/Poseidon, Jason-1/2/3, Sentinel-6 MF)',
             baseline: '1993 Satellite Altimetry Baseline',
+            scenario: isYtd ? 'current' : 'observed',
             scope: 'global',
             updatedAt: nowIso,
             note: isYtd ? '2026: Year-to-date latest satellite altimetry (Sentinel-6 MF)' : undefined,
@@ -306,17 +330,18 @@ export class ClimateDataService {
 
           return {
             year: fYear,
-            value: null,
+            value: val,
             projectedValue: val,
             indicator: 'sea_level',
             unit: 'mm',
-            status: 'projected',
-            source: 'NASA / IPCC AR6 Global Sea Level Projections',
+            status: 'PROJECTED',
+            source: 'IPCC AR6 / GeoTwin Ocean Projections',
+            methodology: 'MODELED / IPCC AR6 Global Sea Level Pathway',
             baseline: '1993 Satellite Altimetry Baseline',
             scenario,
             scope: 'global',
             updatedAt: nowIso,
-            note: `Projected global mean sea level rise (${scenario.toUpperCase()})`,
+            note: `Projected global mean sea level rise under ${scenario.toUpperCase()} pathway (MODELED / IPCC AR6)`,
           };
         });
 
@@ -330,7 +355,7 @@ export class ClimateDataService {
           baseline: '1993 Satellite Altimetry Baseline',
           description: 'Global mean sea level change measured by satellite radar altimeters (TOPEX/Poseidon, Jason-1/2/3, Sentinel-6 MF).',
           updatedAt: nowIso,
-          disclaimer: 'Represents global ocean volumetric expansion and ice melt. Does not represent local coastal flood inundation.',
+          disclaimer: 'Represents global ocean volumetric expansion and ice melt. Inland locations have no direct local sea level coastline; this series represents the global oceanic reference baseline.',
           latestCompletedYear: 2025,
           currentYearStatus: '2026: Year-to-date observation through mid-2026',
           timeline,
@@ -348,9 +373,13 @@ export class ClimateDataService {
             value: p.value,
             indicator: 'sea_ice',
             unit: 'million km²',
-            status: isYtd ? 'year_to_date' : 'observed',
+            status: isYtd ? 'CURRENT/YTD' : 'OBSERVED',
             source: 'NASA / NSIDC Sea Ice Index',
+            methodology: isYtd
+              ? 'Incomplete Year-to-Date Satellite Passive Microwave Telemetry'
+              : 'Satellite Passive Microwave Sensor Observations (SSM/I, SSMIS, AMSR2)',
             baseline: '1979–2000 Climatology Baseline',
+            scenario: isYtd ? 'current' : 'observed',
             scope: 'global',
             updatedAt: nowIso,
             note: isYtd ? '2026: Year-to-date observation through current month' : undefined,
@@ -365,17 +394,18 @@ export class ClimateDataService {
 
           return {
             year: fYear,
-            value: null,
+            value: val,
             projectedValue: val,
             indicator: 'sea_ice',
             unit: 'million km²',
-            status: 'projected',
-            source: 'NSIDC / IPCC Cryosphere Climate Projections',
+            status: 'PROJECTED',
+            source: 'GeoTwin Cryosphere Model (IPCC AR6 WG1)',
+            methodology: 'MODELED / Cryosphere Feedback Regression',
             baseline: '1979–2000 Climatology Baseline',
             scenario,
             scope: 'global',
             updatedAt: nowIso,
-            note: `Projected Arctic sea ice extent (${scenario.toUpperCase()})`,
+            note: `Projected Arctic sea ice extent under ${scenario.toUpperCase()} pathway (MODELED / CRYOSPHERE FEEDBACK)`,
           };
         });
 
@@ -389,7 +419,7 @@ export class ClimateDataService {
           baseline: '1979–2000 Climatology Baseline',
           description: 'Arctic sea ice extent determined from satellite passive microwave sensor measurements.',
           updatedAt: nowIso,
-          disclaimer: 'Observed cryosphere satellite measurements from NSIDC/NASA. Values reflect annual/seasonal sea ice coverage.',
+          disclaimer: 'Observed cryosphere satellite measurements from NSIDC/NASA (2015–2025). Arctic polar metric; not a mid-latitude local measurement.',
           latestCompletedYear: 2025,
           currentYearStatus: '2026: Current observation through August 2026',
           timeline,
@@ -415,9 +445,13 @@ export class ClimateDataService {
             value: val,
             indicator: 'extreme_heat',
             unit: 'days/year',
-            status: isYtd ? 'year_to_date' : 'observed',
+            status: isYtd ? 'CURRENT/YTD' : 'OBSERVED',
             source: 'NASA POWER & Open-Meteo Thermal Telemetry',
+            methodology: isYtd
+              ? 'Incomplete Year-to-Date Thermal Telemetry (Active Summer Season)'
+              : 'Local Daily Maximum Temperature Exceedance (>35°C) Telemetry',
             baseline: '2015–2025 Local Heat Threshold (>35°C)',
+            scenario: isYtd ? 'current' : 'observed',
             location: loc ? { id: loc.id, name: loc.name, latitude: loc.latitude, longitude: loc.longitude } : undefined,
             scope: loc ? 'local' : 'regional',
             updatedAt: nowIso,
@@ -435,18 +469,19 @@ export class ClimateDataService {
 
           return {
             year: fYear,
-            value: null,
+            value: val,
             projectedValue: val,
             indicator: 'extreme_heat',
             unit: 'days/year',
-            status: 'projected',
-            source: 'GeoTwin Heat Stress Index & Scenario Model',
+            status: 'PROJECTED',
+            source: 'GeoTwin Heat Stress Engine',
+            methodology: 'MODELED / LINEAR EXTRAPOLATION (Thermal Exceedance & Urban Heat Factor)',
             baseline: '2015–2025 Local Heat Threshold (>35°C)',
             scenario,
             location: loc ? { id: loc.id, name: loc.name, latitude: loc.latitude, longitude: loc.longitude } : undefined,
             scope: loc ? 'local' : 'regional',
             updatedAt: nowIso,
-            note: `Projected extreme heat days under ${scenario.toUpperCase()}`,
+            note: `Projected extreme heat days under ${scenario.toUpperCase()} pathway (MODELED / LINEAR EXTRAPOLATION)`,
           };
         });
 
@@ -460,9 +495,9 @@ export class ClimateDataService {
           baseline: '2015–2025 Observed Thermal Baseline',
           description: loc ? `Days per year with maximum temperature exceeding 35°C for ${loc.name}.` : 'Annual extreme thermal days threshold.',
           updatedAt: nowIso,
-          disclaimer: 'Derived from localized thermal telemetry and urban heat exposure modeling.',
+          disclaimer: 'Derived from localized thermal telemetry and urban heat exposure modeling (2015–2025). 2026 is Year-to-Date incomplete. Future years represent GeoTwin scenario projections.',
           latestCompletedYear: 2025,
-          currentYearStatus: '2026: Year-to-date; summer months active',
+          currentYearStatus: '2026: Year-to-date observation (summer season active)',
           timeline,
           projections,
           combinedTimeline: [...timeline, ...projections],

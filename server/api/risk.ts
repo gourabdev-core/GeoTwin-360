@@ -4,7 +4,7 @@ import { RiskService } from '../services/riskService.js';
 const router = Router();
 
 router.get('/map', async (req: Request, res: Response, next: NextFunction) => {
-  const { locationId, lat, lng, metric, year } = req.query;
+  const { locationId, lat, lng, metric, year, scenario } = req.query;
 
   try {
     const locId = locationId
@@ -19,6 +19,7 @@ router.get('/map', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const activeScenario = scenario ? String(scenario) : 'default';
 
     if (!metric) {
       const err: any = new Error('Metric query parameter is required.');
@@ -27,7 +28,7 @@ router.get('/map', async (req: Request, res: Response, next: NextFunction) => {
       throw err;
     }
 
-    const mapData = await RiskService.getRiskMapData(locId, metric as string, targetYear);
+    const mapData = await RiskService.getRiskMapData(locId, metric as string, targetYear, activeScenario);
     res.json({
       data: mapData
     });
@@ -38,10 +39,11 @@ router.get('/map', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/:locationId/map', async (req: Request, res: Response, next: NextFunction) => {
   const { locationId } = req.params;
-  const { metric, year } = req.query;
+  const { metric, year, scenario } = req.query;
 
   try {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const activeScenario = scenario ? String(scenario) : 'default';
 
     if (!metric) {
       const err: any = new Error('Metric query parameter is required.');
@@ -50,7 +52,7 @@ router.get('/:locationId/map', async (req: Request, res: Response, next: NextFun
       throw err;
     }
 
-    const mapData = await RiskService.getRiskMapData(locationId, metric as string, targetYear);
+    const mapData = await RiskService.getRiskMapData(locationId, metric as string, targetYear, activeScenario);
     res.json({
       data: mapData
     });
@@ -86,6 +88,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           year: riskResult.year,
           scenario: activeScenario,
           score: riskResult.score,
+          unit: riskResult.unit || 'score (0-1)',
           level: riskResult.level,
           dataType: riskResult.dataType,
           contributingFactors: riskResult.contributingFactors,
@@ -103,6 +106,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           risks[m] = {
             level: riskResult.level,
             score: riskResult.score,
+            unit: riskResult.unit || 'score (0-1)',
             contributingFactors: riskResult.contributingFactors,
             source: riskResult.source,
             dataType: riskResult.dataType,
@@ -112,6 +116,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           risks[m] = {
             level: 'UNAVAILABLE',
             score: null,
+            unit: 'score (0-1)',
             contributingFactors: ['Calculations could not be completed.'],
             source: null,
             dataType: 'UNAVAILABLE',
@@ -124,6 +129,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         data: {
           locationId: locId,
           year: targetYear,
+          scenario: activeScenario,
           risks
         }
       });
@@ -135,13 +141,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/:locationId', async (req: Request, res: Response, next: NextFunction) => {
   const { locationId } = req.params;
-  const { metric, year } = req.query;
+  const { metric, year, scenario } = req.query;
 
   try {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const activeScenario = scenario ? String(scenario) : 'default';
 
     if (metric) {
-      const riskResult = await RiskService.getRisk(locationId, metric as string, targetYear);
+      const riskResult = await RiskService.getRisk(locationId, metric as string, targetYear, activeScenario);
       
       if (riskResult.level === 'UNAVAILABLE') {
         const err: any = new Error(`${metric} risk intelligence is currently unavailable.`);
@@ -155,7 +162,9 @@ router.get('/:locationId', async (req: Request, res: Response, next: NextFunctio
           locationId: riskResult.locationId,
           metric: riskResult.metric,
           year: riskResult.year,
+          scenario: activeScenario,
           score: riskResult.score,
+          unit: riskResult.unit || 'score (0-1)',
           level: riskResult.level,
           dataType: riskResult.dataType,
           contributingFactors: riskResult.contributingFactors,
@@ -173,10 +182,11 @@ router.get('/:locationId', async (req: Request, res: Response, next: NextFunctio
 
       for (const m of metricsList) {
         try {
-          const riskResult = await RiskService.getRisk(locationId, m, targetYear);
+          const riskResult = await RiskService.getRisk(locationId, m, targetYear, activeScenario);
           risks[m] = {
             level: riskResult.level,
             score: riskResult.score,
+            unit: riskResult.unit || 'score (0-1)',
             contributingFactors: riskResult.contributingFactors,
             source: riskResult.source,
             dataType: riskResult.dataType,
@@ -186,6 +196,7 @@ router.get('/:locationId', async (req: Request, res: Response, next: NextFunctio
           risks[m] = {
             level: 'UNAVAILABLE',
             score: null,
+            unit: 'score (0-1)',
             contributingFactors: ['Calculations could not be completed.'],
             source: null,
             dataType: 'UNAVAILABLE',
@@ -198,6 +209,7 @@ router.get('/:locationId', async (req: Request, res: Response, next: NextFunctio
         data: {
           locationId,
           year: targetYear,
+          scenario: activeScenario,
           risks
         }
       });

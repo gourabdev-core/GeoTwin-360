@@ -53,28 +53,53 @@ export function sanitizeErrorMessage(error: unknown, fallbackMessage = 'An unexp
 
   const rawLower = raw.toLowerCase();
 
-  // 1. Rate Limiting (HTTP 429 or quota exhaustion)
+  // 0. Blocked by Zero-Quota Safety Guard
+  if (code === 'GEMINI_CALL_BLOCKED' || rawLower.includes('real gemini api call blocked') || rawLower.includes('live_gemini_test is disabled')) {
+    return 'Gemini live API requests are disabled by safety policy. Operating in deterministic assessment mode.';
+  }
+
+  // 1. Service Unavailable (HTTP 503 / ServiceUnavailable / UNAVAILABLE)
+  if (
+    code === 'GEMINI_SERVICE_UNAVAILABLE' ||
+    code === 'GEMINI_SERVER_ERROR' ||
+    code === 'ServiceUnavailable' ||
+    code === 'UNAVAILABLE' ||
+    status === 503 ||
+    rawLower.includes('serviceunavailable') ||
+    rawLower.includes('service unavailable') ||
+    rawLower.includes('model is overloaded') ||
+    rawLower.includes('overloaded')
+  ) {
+    if (code === 'BACKEND_UNAVAILABLE' || rawLower.includes('port 3001') || rawLower.includes('geotwin 360 backend')) {
+      return 'GeoTwin 360 backend is temporarily unreachable on port 3001.';
+    }
+    return 'Gemini AI reasoning service is temporarily unavailable. Core GeoTwin features remain fully operational.';
+  }
+
+  // 2. Rate Limiting (HTTP 429 or quota exhaustion)
   if (
     code === 'GEMINI_DAILY_QUOTA_EXCEEDED' ||
     rawLower.includes('daily quota') ||
     rawLower.includes('exceeded your current quota') ||
-    rawLower.includes('generaterequestsperday')
+    rawLower.includes('generaterequestsperday') ||
+    rawLower.includes('free_tier_requests')
   ) {
-    return 'AI analysis is temporarily unavailable. Your daily AI quota has been reached. Core GeoTwin features remain available.';
+    return 'AI analysis is temporarily unavailable because the Gemini daily quota has been reached. Core GeoTwin features remain available.';
   }
 
   if (
     status === 429 ||
     code === 'RATE_LIMIT_EXCEEDED' ||
+    code === 'GEMINI_RATE_LIMIT_EXCEEDED' ||
     code === 'RESOURCE_EXHAUSTED' ||
     rawLower.includes('quota exceeded') ||
     rawLower.includes('rate limit') ||
     rawLower.includes('resource_exhausted')
   ) {
-    return 'AI analysis is temporarily unavailable. Your daily AI quota has been reached. Core GeoTwin features remain available.';
+    return 'AI rate limit reached. Intelligent deterministic fallback model active.';
   }
 
-  // 2. Network / Offline failures
+  // 3. Network / Offline failures
   if (
     code === 'NETWORK_ERROR' ||
     code === 'ERR_NETWORK' ||
@@ -87,31 +112,47 @@ export function sanitizeErrorMessage(error: unknown, fallbackMessage = 'An unexp
     return 'Network connection unavailable. Operating in offline/cached mode.';
   }
 
-  // 3. Unauthorized / Session expired
+  // 4. Unauthorized / Session expired / Gemini API key
+  if (
+    code === 'GEMINI_INVALID_KEY' ||
+    code === 'GEMINI_NOT_CONFIGURED' ||
+    rawLower.includes('api key not valid') ||
+    rawLower.includes('api_key_invalid')
+  ) {
+    return 'Gemini API authentication failed. GEMINI_API_KEY is invalid or missing on the server.';
+  }
+
+  if (
+    code === 'GEMINI_PERMISSION_DENIED' ||
+    (status === 403 && (rawLower.includes('gemini') || rawLower.includes('billing') || rawLower.includes('permission_denied')))
+  ) {
+    return 'Gemini API access denied or project billing required.';
+  }
+
   if (status === 401 || status === 403 || code === 'UNAUTHORIZED' || rawLower.includes('unauthorized') || rawLower.includes('jwt expired')) {
     return 'Authentication required. Please sign in to perform this action.';
   }
 
-  // 4. Invalid Location / Geocoding failure
+  // 5. Invalid Location / Geocoding failure
   if (code === 'INVALID_LOCATION' || rawLower.includes('invalid coordinates') || rawLower.includes('location not found') || rawLower.includes('out of range')) {
     return 'Invalid location coordinates or name. Please select a valid city or address.';
   }
 
-  // 5. Database schema / migration pending
+  // 6. Database schema / migration pending
   if (
     rawLower.includes('schema cache') ||
-    rawLower.includes('table') && rawLower.includes('not found') ||
-    rawLower.includes('relation') && rawLower.includes('does not exist')
+    (rawLower.includes('table') && rawLower.includes('not found')) ||
+    (rawLower.includes('relation') && rawLower.includes('does not exist'))
   ) {
     return 'Cloud synchronization temporarily unavailable. Operating with local data.';
   }
 
-  // 6. Weather service failure
+  // 7. Weather service failure
   if (rawLower.includes('openweather') || rawLower.includes('weather data unavailable') || rawLower.includes('weather service')) {
     return 'Live weather feed currently unavailable. Historical climate observations remain active.';
   }
 
-  // 7. AI generation failure
+  // 8. General AI generation failure
   if (rawLower.includes('gemini') || rawLower.includes('genai') || rawLower.includes('generativelanguage') || rawLower.includes('model')) {
     return 'AI advisor is currently operating in deterministic ground-truth mode.';
   }

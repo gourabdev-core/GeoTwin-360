@@ -12,7 +12,9 @@ export interface AuthContextType {
   error: string | null;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string; sessionEstablished?: boolean }>;
-  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string; providerNotConfigured?: boolean }>;
+  signInWithGoogleDemo: () => Promise<{ success: boolean; error?: string }>;
+  checkGoogleStatus: () => Promise<{ enabled: boolean; message?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -29,17 +31,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Helper to load or derive profile
   const fetchAndSetProfile = useCallback(async (currentUser: User) => {
     try {
+      const meta = currentUser.user_metadata || {};
+      const avatar = meta.avatar_url || meta.picture || null;
+      const fullName = meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'User';
+
       const existingProfile = await profileRepository.getProfile(currentUser.id);
       if (existingProfile) {
+        if (!existingProfile.avatar_url && avatar) {
+          existingProfile.avatar_url = avatar;
+        }
         setProfile(existingProfile);
       } else {
         // Synthesize fallback profile from user metadata if table row is pending
-        const meta = currentUser.user_metadata || {};
         const fallbackProfile: DatabaseProfile = {
           id: currentUser.id,
-          full_name: meta.full_name || meta.name || currentUser.email?.split('@')[0] || 'User',
+          full_name: fullName,
           email: currentUser.email || '',
-          avatar_url: meta.avatar_url || null,
+          avatar_url: avatar,
           role: 'Sustainability Lead',
           organization: null,
           created_at: currentUser.created_at || new Date().toISOString(),
@@ -70,6 +78,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(initialSession);
             setUser(initialSession.user);
             await fetchAndSetProfile(initialSession.user);
+
+            // Clean up hash fragments if returning from OAuth redirect
+            if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+          } else if (typeof window !== 'undefined') {
+            const rawDemo = localStorage.getItem('geotwin_demo_auth_session');
+            if (rawDemo) {
+              try {
+                const parsed = JSON.parse(rawDemo);
+                if (parsed?.user && parsed?.session) {
+                  setUser(parsed.user);
+                  setSession(parsed.session);
+                  setProfile(parsed.profile || null);
+                }
+              } catch {
+                localStorage.removeItem('geotwin_demo_auth_session');
+              }
+            } else {
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+            }
           } else {
             setSession(null);
             setUser(null);
@@ -206,13 +237,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+  const checkGoogleStatus = useCallback(async (): Promise<{ enabled: boolean; message?: string }> => {
+    try {
+      const res = await fetch('/api/v1/auth/google-status');
+      if (res.ok) {
+        const data = await res.json();
+        return { enabled: Boolean(data.enabled), message: data.message };
+      }
+    } catch {
+      // Backend not reachable
+    }
+    return { enabled: false, message: 'Google provider status could not be verified.' };
+  }, []);
+
+  const signInWithGoogle = async (): Promise<{ success: boolean; error?: string; providerNotConfigured?: boolean }> => {
     setError(null);
     try {
+      // 1. Pre-flight check Google OAuth provider configuration
+      const status = await checkGoogleStatus();
+      if (!status.enabled) {
+        const warning = 'Google OAuth provider is not yet enabled in your Supabase project (Authentication > Providers > Google).';
+        setError(warning);
+        return { success: false, error: warning, providerNotConfigured: true };
+      }
+
+      // 2. Return URL preserves current route rather than dumping user to root
+      const returnUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}${window.location.search}`
+        : 'http://localhost:5173/dashboard';
+
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: returnUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
@@ -230,8 +291,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithGoogleDemo = async (): Promise<{ success: boolean; error?: string }> => {
+    setError(null);
+    try {
+      const demoUser: User = {
+        id: 'usr-google-demo-lead',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          full_name: 'Alex Chen',
+          name: 'Alex Chen',
+          email: 'alex.chen.climate@gmail.com',
+          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
+          picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
+        },
+        aud: 'authenticated',
+        confirmation_sent_at: new Date().toISOString(),
+        recovery_sent_at: '',
+        email_change_sent_at: '',
+        new_email: '',
+        invited_at: '',
+        action_link: '',
+        email: 'alex.chen.climate@gmail.com',
+        phone: '',
+        created_at: new Date().toISOString(),
+        confirmed_at: new Date().toISOString(),
+        email_confirmed_at: new Date().toISOString(),
+        phone_confirmed_at: '',
+        last_sign_in_at: new Date().toISOString(),
+        role: 'authenticated',
+        updated_at: new Date().toISOString(),
+        identities: [],
+        factors: [],
+      };
+
+      const demoProfile: DatabaseProfile = {
+        id: demoUser.id,
+        full_name: 'Alex Chen',
+        email: 'alex.chen.climate@gmail.com',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
+        role: 'Sustainability Lead',
+        organization: 'Global Climate Resilience Initiative',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const demoSession: Session = {
+        access_token: 'demo-google-session-token',
+        token_type: 'bearer',
+        expires_in: 86400,
+        expires_at: Math.floor(Date.now() / 1000) + 86400,
+        refresh_token: 'demo-google-refresh-token',
+        user: demoUser,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'geotwin_demo_auth_session',
+          JSON.stringify({ user: demoUser, session: demoSession, profile: demoProfile })
+        );
+      }
+
+      setUser(demoUser);
+      setSession(demoSession);
+      setProfile(demoProfile);
+      return { success: true };
+    } catch (err: any) {
+      const msg = err.message || 'Failed to initialize demo Google session.';
+      setError(msg);
+      return { success: false, error: msg };
+    }
+  };
+
   const signOut = async (): Promise<void> => {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('geotwin_demo_auth_session');
+      }
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
@@ -253,6 +388,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signInWithGoogle,
+        signInWithGoogleDemo,
+        checkGoogleStatus,
         signOut,
         refreshProfile,
       }}

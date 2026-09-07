@@ -56,8 +56,14 @@ const getCountryName = (code: string): string => {
 };
 
 export class LocationService {
+  private static searchCache = new Map<string, { data: LocationSearchResult[]; timestamp: number }>();
+  private static reverseCache = new Map<string, { data: LocationSearchResult; timestamp: number }>();
+  private static locationByIdCache = new Map<string, { data: any; timestamp: number }>();
+  private static readonly SEARCH_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  private static readonly LOCATION_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
   /**
-   * Search for locations using OpenWeather Geocoding API
+   * Search for locations using OpenWeather Geocoding API with in-memory caching
    */
   static async searchLocations(query: string, limit = 5): Promise<LocationSearchResult[]> {
     if (!query || query.trim().length < 2) {
@@ -65,6 +71,13 @@ export class LocationService {
       err.statusCode = 400;
       err.code = 'INVALID_QUERY';
       throw err;
+    }
+
+    const trimmedQuery = query.trim();
+    const cacheKey = `${trimmedQuery.toLowerCase()}__${limit}`;
+    const cached = this.searchCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.SEARCH_CACHE_TTL_MS) {
+      return cached.data;
     }
 
     if (query.length > 100) {
@@ -95,14 +108,14 @@ export class LocationService {
         throw new Error('Invalid response format from geocoding provider.');
       }
 
-      return response.data.map((item: any) => {
+      const results = response.data.map((item: any) => {
         const countryName = getCountryName(item.country);
         const stateName = item.state || undefined;
         const displayName = [item.name, stateName, countryName].filter(Boolean).join(', ');
         const lat = item.lat !== undefined && item.lat !== null ? parseFloat(Number(item.lat).toFixed(6)) : 0;
         const lng = item.lon !== undefined && item.lon !== null ? parseFloat(Number(item.lon).toFixed(6)) : 0;
         const id = `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`;
-        return {
+        const resObj: LocationSearchResult = {
           id,
           name: item.name || 'Unknown',
           city: item.name || 'Unknown',
@@ -114,7 +127,14 @@ export class LocationService {
           longitude: lng,
           displayName,
         };
+        // Pre-seed locationById and reverse caches to avoid duplicate roundtrips
+        this.locationByIdCache.set(id, { data: resObj, timestamp: Date.now() });
+        this.reverseCache.set(`${lat.toFixed(4)}_${lng.toFixed(4)}`, { data: resObj, timestamp: Date.now() });
+        return resObj;
       });
+
+      this.searchCache.set(cacheKey, { data: results, timestamp: Date.now() });
+      return results;
     } catch (error: any) {
       console.error('[LocationService] OpenWeather Geocoding API failure:', error.message);
       const err: AppError = new Error('Location search is temporarily unavailable.');
@@ -125,7 +145,7 @@ export class LocationService {
   }
 
   /**
-   * Resolve coordinates using OpenWeather Reverse Geocoding API
+   * Resolve coordinates using OpenWeather Reverse Geocoding API with caching
    */
   static async reverseGeocode(lat: number, lng: number): Promise<LocationSearchResult> {
     if (isNaN(lat) || lat < -90 || lat > 90) {
@@ -140,6 +160,12 @@ export class LocationService {
       err.statusCode = 400;
       err.code = 'INVALID_COORDINATES';
       throw err;
+    }
+
+    const revKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    const cached = this.reverseCache.get(revKey);
+    if (cached && Date.now() - cached.timestamp < this.LOCATION_CACHE_TTL_MS) {
+      return cached.data;
     }
 
     if (!env.OPENWEATHER_API_KEY) {
@@ -182,7 +208,7 @@ export class LocationService {
       const parsedLng = parseFloat(lng.toFixed(6));
       const id = `loc-${parsedLat.toFixed(4)}-${parsedLng.toFixed(4)}`;
 
-      return {
+      const result: LocationSearchResult = {
         id,
         name: item.name || 'Unknown',
         city: item.name || 'Unknown',
@@ -194,6 +220,10 @@ export class LocationService {
         longitude: parsedLng,
         displayName,
       };
+
+      this.reverseCache.set(revKey, { data: result, timestamp: Date.now() });
+      this.locationByIdCache.set(id, { data: result, timestamp: Date.now() });
+      return result;
     } catch (error: any) {
       console.error('[LocationService] OpenWeather Reverse Geocoding API failure:', error.message);
       if (error.code === 'LOCATION_NOT_FOUND') throw error;
@@ -257,6 +287,7 @@ export class LocationService {
       }
 
       if (existing) {
+        this.locationByIdCache.set(existing.id, { data: existing, timestamp: Date.now() });
         return existing;
       }
 
@@ -278,7 +309,7 @@ export class LocationService {
 
       if (insertError) {
         if (insertError.code === 'PGRST205' || insertError.message?.includes('schema cache')) {
-          return {
+          const fallbackEntity = {
             id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
             name: data.name,
             city: data.city || data.name,
@@ -291,6 +322,8 @@ export class LocationService {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
+          this.locationByIdCache.set(fallbackEntity.id, { data: fallbackEntity, timestamp: Date.now() });
+          return fallbackEntity;
         }
         console.error('[LocationService] Supabase INSERT failed:', insertError.message, `(code: ${insertError.code}, privileged: ${isPrivileged})`);
         const err: AppError = new Error('Location persistence is temporarily unavailable.');
@@ -299,12 +332,13 @@ export class LocationService {
         throw err;
       }
 
+      this.locationByIdCache.set(inserted.id, { data: inserted, timestamp: Date.now() });
       return inserted;
     } catch (error: any) {
       if (error.code === 'PERSISTENCE_UNAVAILABLE') throw error;
       console.error('[LocationService] Supabase DB integration failure:', error.message);
       // Fallback entity if DB fails
-      return {
+      const fallbackEntity = {
         id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
         name: data.name,
         city: data.city || data.name,
@@ -317,11 +351,13 @@ export class LocationService {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+      this.locationByIdCache.set(fallbackEntity.id, { data: fallbackEntity, timestamp: Date.now() });
+      return fallbackEntity;
     }
   }
 
   /**
-   * Retrieve a saved location record by its UUID or synthetic ID
+   * Retrieve a saved location record by its UUID or synthetic ID with in-memory caching
    */
   static async getLocationById(id: string): Promise<any> {
     if (!id) {
@@ -329,6 +365,11 @@ export class LocationService {
       err.statusCode = 400;
       err.code = 'VALIDATION_FAILED';
       throw err;
+    }
+
+    const cached = this.locationByIdCache.get(id);
+    if (cached && Date.now() - cached.timestamp < this.LOCATION_CACHE_TTL_MS) {
+      return cached.data;
     }
 
     const locMatch = id.match(/^loc[-_](-?\d+(?:\.\d+)?)[-_](-?\d+(?:\.\d+)?)$/);
@@ -342,11 +383,13 @@ export class LocationService {
         } catch {
           // Keep coordinate representation
         }
-        return {
+        const stateName = rev?.state || rev?.region || null;
+        const syntheticObj = {
           id,
           name: rev?.name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
           city: rev?.city || rev?.name || 'Selected Location',
-          region: rev?.region || null,
+          region: stateName,
+          state: stateName,
           country: rev?.country || 'Unknown',
           country_code: rev?.countryCode || null,
           latitude: lat,
@@ -354,6 +397,8 @@ export class LocationService {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
+        this.locationByIdCache.set(id, { data: syntheticObj, timestamp: Date.now() });
+        return syntheticObj;
       }
     }
 
@@ -379,11 +424,13 @@ export class LocationService {
             try {
               rev = await this.reverseGeocode(lat, lng);
             } catch {}
-            return {
+            const stateName = rev?.state || rev?.region || null;
+            const genericObj = {
               id,
               name: rev?.name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
               city: rev?.city || rev?.name || 'Selected Location',
-              region: rev?.region || null,
+              region: stateName,
+              state: stateName,
               country: rev?.country || 'Unknown',
               country_code: rev?.countryCode || null,
               latitude: lat,
@@ -391,6 +438,8 @@ export class LocationService {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
+            this.locationByIdCache.set(id, { data: genericObj, timestamp: Date.now() });
+            return genericObj;
           }
         }
 
@@ -400,6 +449,7 @@ export class LocationService {
         throw err;
       }
 
+      this.locationByIdCache.set(id, { data, timestamp: Date.now() });
       return data;
     } catch (error: any) {
       console.error('[LocationService] Supabase DB fetch failure:', error.message);

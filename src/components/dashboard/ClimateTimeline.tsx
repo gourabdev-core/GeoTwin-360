@@ -64,6 +64,7 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const fetchTimeline = useCallback(() => {
+    setData(null);
     setLoading(true);
     setError(null);
     climateService
@@ -94,18 +95,21 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
 
     return data.combinedTimeline
       .map((pt: ClimateTimelineDataPoint) => {
-        const isObserved = pt.status === 'observed';
-        const isProjected = pt.status === 'projected';
+        const isObs = pt.status === 'OBSERVED' || pt.status === 'observed';
+        const isProj =
+          pt.status === 'PROJECTED' ||
+          pt.status === 'projected' ||
+          pt.status === 'MODELLED';
 
         return {
           year: pt.year,
           rawPoint: pt,
           // Solid green for completed historical observations (2015 - 2025)
-          observedValue: isObserved ? pt.value : null,
+          observedValue: isObs ? pt.value : null,
           // Cyan bridge segment for 2026 YTD (bridges 2025 observed to 2026 YTD)
           ytdValue: pt.year === 2025 ? val2025 : pt.year === 2026 ? val2026 : null,
           // Dashed amber for future scenario projections (bridges from 2026 YTD forward)
-          projectedValue: pt.year === 2026 ? val2026 : isProjected ? (pt.projectedValue ?? pt.value) : null,
+          projectedValue: pt.year === 2026 ? val2026 : isProj ? (pt.projectedValue ?? pt.value) : null,
         };
       })
       .sort((a, b) => a.year - b.year);
@@ -117,6 +121,75 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
 
   const unit = data?.unit || '°C';
   const scopeLabel = data?.scope ? (data.scope.charAt(0).toUpperCase() + data.scope.slice(1)) : 'Global';
+
+  // Custom Scientifically Honest Tooltip
+  const renderCustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const item = payload[0];
+    const rawPt = item?.payload?.rawPoint as ClimateTimelineDataPoint | undefined;
+    if (!rawPt) return null;
+
+    const status = rawPt.status;
+    const isYtd = status === 'CURRENT/YTD' || status === 'year_to_date';
+    const isProjected = status === 'PROJECTED' || status === 'projected';
+    const isModelled = status === 'MODELLED';
+    const isUnavailable = status === 'UNAVAILABLE';
+
+    let statusLabel = 'OBSERVED';
+    let badgeColor = 'bg-spotify-green text-black';
+    if (isYtd) {
+      statusLabel = 'CURRENT / YTD';
+      badgeColor = 'bg-sky-400 text-black';
+    } else if (isModelled) {
+      statusLabel = 'MODELLED';
+      badgeColor = 'bg-purple-400 text-black';
+    } else if (isProjected) {
+      statusLabel = `PROJECTED (${(rawPt.scenario || scenario).toUpperCase()})`;
+      badgeColor = 'bg-amber-400 text-black';
+    } else if (isUnavailable) {
+      statusLabel = 'UNAVAILABLE';
+      badgeColor = 'bg-gray-600 text-white';
+    }
+
+    const val = rawPt.value !== null && rawPt.value !== undefined ? rawPt.value : rawPt.projectedValue;
+    const num = typeof val === 'number' ? val : null;
+    const formattedVal = num !== null
+      ? ((activeIndicator === 'temperature' && num > 0 ? `+${num.toFixed(2)}` : num.toFixed(1)) + ` ${unit}`)
+      : 'Data unavailable';
+
+    return (
+      <div className="bg-[#181818] border border-[#282828] rounded-lg p-2.5 shadow-xl max-w-xs text-xs space-y-1.5 font-sans">
+        <div className="flex items-center justify-between gap-2 border-b border-[#282828] pb-1.5">
+          <span className="font-bold text-white text-sm">{label}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${badgeColor}`}>
+            {statusLabel}
+          </span>
+        </div>
+
+        <div className="flex items-baseline gap-1 text-white font-semibold text-base">
+          <span>{formattedVal}</span>
+        </div>
+
+        <div className="text-[11px] text-text-silver space-y-1">
+          <div>
+            <span className="text-text-base font-medium">Source: </span>
+            <span>{rawPt.source || data?.source || 'Earth Observation'}</span>
+          </div>
+          {rawPt.methodology && (
+            <div>
+              <span className="text-text-base font-medium">Methodology: </span>
+              <span className="text-text-silver/90">{rawPt.methodology}</span>
+            </div>
+          )}
+          {rawPt.note && (
+            <div className="text-[10px] text-text-silver/70 italic pt-0.5">
+              {rawPt.note}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className={`flex flex-col min-h-[360px] ${className}`}>
@@ -141,11 +214,11 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
             Observed (2015–2025)
           </span>
           <span className="text-[10px] text-black bg-sky-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-            YTD (2026)
+            Current YTD (2026)
           </span>
           {hasProjections && (
             <span className="text-[10px] text-black bg-amber-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-              Projected ({scenario})
+              Projected (2027–2050 · {scenario.toUpperCase()})
             </span>
           )}
         </div>
@@ -244,42 +317,7 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
                   domain={['auto', 'auto']}
                 />
 
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#181818',
-                    border: '1px solid #282828',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    fontFamily: 'sans-serif',
-                    padding: '8px 12px',
-                  }}
-                  labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
-                  formatter={(val: any, _name: any, item: any) => {
-                    if (val === null || val === undefined || isNaN(Number(val))) return ['Data unavailable', ''];
-                    const rawPt = item?.payload?.rawPoint as ClimateTimelineDataPoint | undefined;
-                    const num = Number(val);
-                    const formattedVal = (activeIndicator === 'temperature' && num > 0)
-                      ? `+${num.toFixed(2)} ${unit}`
-                      : `${num.toFixed(1)} ${unit}`;
-
-                    if (rawPt?.status === 'year_to_date') {
-                      return [
-                        formattedVal,
-                        `2026 Year-to-Date (${data?.source || 'Observed'} · Incomplete)`,
-                      ];
-                    }
-                    if (rawPt?.status === 'projected') {
-                      return [
-                        formattedVal,
-                        `Projected (${scenario.toUpperCase()})`,
-                      ];
-                    }
-                    return [
-                      formattedVal,
-                      `Observed Annual (${data?.source || 'Authoritative Record'})`,
-                    ];
-                  }}
-                />
+                <Tooltip content={renderCustomTooltip} />
 
                 <Legend
                   verticalAlign="top"
@@ -293,7 +331,7 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
                   yAxisId="left"
                   type="monotone"
                   dataKey="observedValue"
-                  name={`Observed Annual (${unit})`}
+                  name={`Observed (2015–2025) [${unit}]`}
                   stroke="#1DB954"
                   strokeWidth={2.5}
                   dot={{ r: 4, strokeWidth: 1, fill: '#1DB954' }}
@@ -306,7 +344,7 @@ export const ClimateTimeline: React.FC<ClimateTimelineProps> = ({
                   yAxisId="left"
                   type="monotone"
                   dataKey="ytdValue"
-                  name="2026 Year-to-Date (Incomplete)"
+                  name="Current YTD (2026 Incomplete)"
                   stroke="#38bdf8"
                   strokeWidth={2}
                   strokeDasharray="4 3"

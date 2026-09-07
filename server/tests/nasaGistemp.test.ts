@@ -18,20 +18,22 @@ Year,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,J-D,D-N,DJF,MAM,JJA,SON
 
     const p2024 = parsed.find(p => p.year === 2024);
     assert.ok(p2024, '2024 should be present');
-    assert.strictEqual(p2024.status, 'observed', '2024 must have status observed');
+    assert.strictEqual(p2024.status, 'OBSERVED', '2024 must have status OBSERVED');
     assert.strictEqual(p2024.value, 1.28, '2024 value should match J-D 1.28');
     assert.strictEqual(p2024.source, 'NASA GISTEMP v4');
+    assert.ok(p2024.methodology, '2024 must have methodology');
 
     const p2025 = parsed.find(p => p.year === 2025);
     assert.ok(p2025, '2025 should be present');
-    assert.strictEqual(p2025.status, 'observed', '2025 must have status observed');
+    assert.strictEqual(p2025.status, 'OBSERVED', '2025 must have status OBSERVED');
     assert.strictEqual(p2025.value, 1.19, '2025 value should match J-D 1.19');
     assert.strictEqual(p2025.source, 'NASA GISTEMP v4');
+    assert.ok(p2025.methodology, '2025 must have methodology');
 
     const p2026 = parsed.find(p => p.year === 2026);
     assert.ok(p2026, '2026 should be present');
-    assert.strictEqual(p2026.status, 'year_to_date', '2026 must be year_to_date, NOT observed');
-    assert.notStrictEqual(p2026.status, 'observed', '2026 must not be marked as a completed annual observation');
+    assert.strictEqual(p2026.status, 'CURRENT/YTD', '2026 must be CURRENT/YTD, NOT OBSERVED');
+    assert.notStrictEqual(p2026.status, 'OBSERVED', '2026 must not be marked as a completed annual observation');
     assert.strictEqual(p2026.value, 1.19, '2026 YTD average of 7 months should be 1.19');
     assert.ok(p2026.note?.includes('not yet complete') || p2026.note?.includes('Year-to-date'), '2026 should have incomplete year note');
     console.log('- CSV parsing and status categorization tests passed.');
@@ -53,23 +55,24 @@ Year,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,J-D,D-N,DJF,MAM,JJA,SON
       assert.ok(typeof point.value === 'number', `Year ${yr} value must be a valid number`);
       assert.ok(point.source === 'NASA GISTEMP v4', `Year ${yr} source must be NASA GISTEMP v4`);
       assert.ok(point.baseline === '1951–1980 NASA Baseline', `Year ${yr} baseline must be 1951–1980 NASA Baseline`);
+      assert.ok(point.methodology, `Year ${yr} must have methodology`);
 
       if (yr <= 2025) {
-        assert.strictEqual(point.status, 'observed', `Year ${yr} must have status 'observed'`);
+        assert.strictEqual(point.status, 'OBSERVED', `Year ${yr} must have status 'OBSERVED'`);
       } else if (yr === 2026) {
-        assert.strictEqual(point.status, 'year_to_date', 'Year 2026 must have status "year_to_date"');
-        assert.notStrictEqual(point.status, 'observed', 'Year 2026 must NOT be labeled observed annual');
+        assert.strictEqual(point.status, 'CURRENT/YTD', 'Year 2026 must have status "CURRENT/YTD"');
+        assert.notStrictEqual(point.status, 'OBSERVED', 'Year 2026 must NOT be labeled observed annual');
       }
     }
 
     // Verify 2025 specific value
     const pt2025 = dataset.timeline.find(p => p.year === 2025);
     assert.strictEqual(pt2025?.value, 1.19, '2025 NASA GISTEMP observed anomaly must be 1.19°C');
-    assert.strictEqual(pt2025?.status, 'observed', '2025 must be observed');
+    assert.strictEqual(pt2025?.status, 'OBSERVED', '2025 must be OBSERVED');
 
     // Verify 2026 specific status
     const pt2026 = dataset.timeline.find(p => p.year === 2026);
-    assert.strictEqual(pt2026?.status, 'year_to_date', '2026 must be year_to_date');
+    assert.strictEqual(pt2026?.status, 'CURRENT/YTD', '2026 must be CURRENT/YTD');
     assert.ok(pt2026?.note, '2026 should have explicit notation regarding incomplete annual data');
 
     console.log(`- Successfully verified timeline years 2015–2026. 2025 value: +${pt2025?.value}°C (Observed), 2026: +${pt2026?.value}°C (YTD Incomplete).`);

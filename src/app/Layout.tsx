@@ -8,7 +8,14 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('geotwin_sidebar_open');
+      if (saved !== null) return saved === 'true';
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
@@ -41,11 +48,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('geotwin_sidebar_open', String(next));
+      }
+      return next;
+    });
   };
 
   const closeSidebar = () => {
     setSidebarOpen(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('geotwin_sidebar_open', 'false');
+    }
   };
 
   return (
@@ -74,7 +90,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         )}
 
-        <TopHeader onToggleSidebar={toggleSidebar} />
+        <TopHeader onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">

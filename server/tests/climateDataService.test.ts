@@ -27,31 +27,62 @@ describe('GeoTwin 360 - Climate Data System Correction Test Suite', () => {
     }
   });
 
-  it('should strictly separate 2025 observed, 2026 YTD, and future projections', async () => {
+  it('should strictly separate 2025 observed, 2026 YTD, and future projections with complete metadata', async () => {
     for (const ind of indicators) {
       const dataset = await ClimateDataService.getIndicatorTimeline(ind);
+
+      // Check every timeline and projection point has required internal fields
+      for (const pt of dataset.combinedTimeline) {
+        assert.ok(typeof pt.year === 'number', `Year must be numeric for ${ind}`);
+        assert.ok(pt.unit, `Unit must be present for year ${pt.year} in ${ind}`);
+        assert.strictEqual(pt.indicator, ind, `Indicator must match ${ind}`);
+        assert.ok(pt.status, `Status must be present for year ${pt.year} in ${ind}`);
+        assert.ok(pt.source, `Source must be present for year ${pt.year} in ${ind}`);
+        assert.ok(pt.methodology, `Methodology must be present for year ${pt.year} in ${ind}`);
+        assert.ok(pt.scenario, `Scenario must be present for year ${pt.year} in ${ind}`);
+
+        // Never represent future projected values as NASA observations
+        if (pt.year > 2026) {
+          assert.ok(
+            !pt.source.toLowerCase().includes('nasa observation') &&
+            !pt.source.toLowerCase().includes('gistemp') &&
+            !pt.source.toLowerCase().includes('nsidc sea ice index'),
+            `Future year ${pt.year} source must NOT be labeled as a NASA observation (${pt.source})`
+          );
+          assert.ok(
+            pt.status === 'PROJECTED' || pt.status === 'MODELLED',
+            `Future year ${pt.year} status must be PROJECTED or MODELLED, got ${pt.status}`
+          );
+          assert.ok(
+            pt.methodology.includes('MODELED') || pt.methodology.includes('EXTRAPOLATION'),
+            `Future year ${pt.year} methodology must disclose modeling/extrapolation`
+          );
+        }
+      }
 
       // Check 2025 observed point
       const pt2025 = dataset.timeline.find(p => p.year === 2025);
       assert.ok(pt2025, `2025 record must exist for ${ind}`);
-      assert.strictEqual(pt2025.status, 'observed', `2025 status must be "observed" for ${ind}`);
+      assert.strictEqual(pt2025.status, 'OBSERVED', `2025 status must be "OBSERVED" for ${ind}`);
       assert.ok(typeof pt2025.value === 'number', `2025 value must be numeric for ${ind}`);
       assert.ok(!isNaN(pt2025.value), `2025 value must not be NaN for ${ind}`);
+      assert.ok(pt2025.methodology, `2025 methodology must be present for ${ind}`);
 
       // Check 2026 Year-to-Date point (never completed annual)
       const pt2026 = dataset.timeline.find(p => p.year === 2026);
       assert.ok(pt2026, `2026 record must exist for ${ind}`);
-      assert.strictEqual(pt2026.status, 'year_to_date', `2026 status must be "year_to_date" for ${ind}`);
+      assert.strictEqual(pt2026.status, 'CURRENT/YTD', `2026 status must be "CURRENT/YTD" for ${ind}`);
       assert.ok(typeof pt2026.value === 'number', `2026 value must be numeric for ${ind}`);
       assert.ok(!isNaN(pt2026.value), `2026 value must not be NaN for ${ind}`);
+      assert.ok(pt2026.methodology, `2026 methodology must be present for ${ind}`);
 
-      // Check Future projections (2030, 2035, 2040, 2050)
-      for (const fYear of [2030, 2035, 2040, 2050]) {
-        const projPt = dataset.projections.find(p => p.year === fYear);
-        assert.ok(projPt, `${fYear} projection must exist for ${ind}`);
-        assert.strictEqual(projPt.status, 'projected', `${fYear} status must be "projected" for ${ind}`);
-        assert.ok(typeof projPt.projectedValue === 'number', `${fYear} projectedValue must be numeric for ${ind}`);
-        assert.ok(!isNaN(projPt.projectedValue), `${fYear} projectedValue must not be NaN for ${ind}`);
+      // Check milestone years: 2015, 2020, 2025, 2026, 2030, 2035, 2040, 2050
+      const benchmarkYears = [2015, 2020, 2025, 2026, 2030, 2035, 2040, 2050];
+      for (const bYear of benchmarkYears) {
+        const found = dataset.combinedTimeline.find(p => p.year === bYear);
+        assert.ok(found, `Benchmark year ${bYear} must exist in combined timeline for ${ind}`);
+        assert.ok(typeof found.value === 'number', `Benchmark year ${bYear} must have numeric value`);
+        assert.ok(!isNaN(found.value!), `Benchmark year ${bYear} value must not be NaN`);
       }
     }
   });
@@ -126,5 +157,26 @@ describe('GeoTwin 360 - Climate Data System Correction Test Suite', () => {
     assert.ok(analysis.indicators.precipitationTrend.value > 0);
     assert.ok(analysis.indicators.heatRisk.score > 0);
     assert.ok(analysis.indicators.overallRisk.score > 0);
+  });
+
+  it('should support multiple global locations with honest local vs global scopes', async () => {
+    const locations = [
+      { id: 'loc-23.6500-88.1300', name: 'Katwa' },
+      { id: 'loc-51.5074--0.1278', name: 'London' },
+      { id: 'loc-40.7128--74.0060', name: 'New York' },
+      { id: 'loc-35.6762-139.6503', name: 'Tokyo' },
+    ];
+
+    for (const loc of locations) {
+      const precip = await ClimateDataService.getIndicatorTimeline('precipitation', loc.id);
+      assert.strictEqual(precip.scope, 'local');
+      assert.ok(precip.timeline.length >= 12);
+      assert.ok(precip.projections.length === 4);
+
+      // Sea level must honestly disclose global oceanic scope
+      const seaLevel = await ClimateDataService.getIndicatorTimeline('sea_level', loc.id);
+      assert.strictEqual(seaLevel.scope, 'global');
+      assert.ok(seaLevel.disclaimer.includes('Inland locations have no direct local sea level coastline'));
+    }
   });
 });

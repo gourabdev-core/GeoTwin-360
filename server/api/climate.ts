@@ -119,7 +119,7 @@ const handleClimateOverview = async (
           },
           projection: {
             modelMethod: `Linear Regression (Ordinary Least Squares) - ${activeScenario.toUpperCase()}`,
-            baselinePeriod: '2015-2024',
+            baselinePeriod: '2015-2025',
             sourceData: 'NASA POWER',
             confidence: modelConfidence,
             generatedAt: new Date().toISOString(),

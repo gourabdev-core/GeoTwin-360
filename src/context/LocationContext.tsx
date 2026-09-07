@@ -105,30 +105,64 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return;
           }
 
-          const fallbackName = urlName ? urlName.split(',')[0].trim() : `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-          const fallbackCity = fallbackName;
-          const fallbackDisplayName = urlName || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+          // Check if localStorage already has full metadata for these coordinates
+          let matchedStored: LocationModel | null = null;
+          try {
+            const rawStored = localStorage.getItem(STORAGE_KEY);
+            if (rawStored) {
+              const parsed = JSON.parse(rawStored);
+              if (
+                parsed &&
+                typeof parsed.latitude === 'number' &&
+                typeof parsed.longitude === 'number' &&
+                Math.abs(parsed.latitude - lat) < 0.001 &&
+                Math.abs(parsed.longitude - lng) < 0.001
+              ) {
+                matchedStored = parsed;
+              }
+            }
+          } catch {
+            // Ignore parse errors
+          }
+
+          if (matchedStored && matchedStored.country && matchedStored.country !== 'Unknown') {
+            applyLocation(matchedStored, false);
+            setLoading(false);
+            return;
+          }
+
+          const nameParts = urlName ? urlName.split(',').map((p) => p.trim()).filter(Boolean) : [];
+          const fallbackCity = nameParts[0] || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+          const fallbackState = nameParts.length > 2 ? nameParts[1] : undefined;
+          const fallbackCountry = nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'Unknown';
 
           const immediateLocation: LocationModel = {
             id: `loc-${lat.toFixed(4)}-${lng.toFixed(4)}`,
-            name: fallbackName,
+            name: fallbackCity,
             city: fallbackCity,
+            region: fallbackState,
+            state: fallbackState,
             latitude: lat,
             longitude: lng,
-            country: 'Unknown',
-            displayName: fallbackDisplayName,
+            country: fallbackCountry,
+            displayName: urlName || `${fallbackCity}${fallbackCountry !== 'Unknown' ? `, ${fallbackCountry}` : ''}`,
           };
 
           applyLocation(immediateLocation, false);
           setLoading(false);
 
-          // If display name was generic coordinates, reverse geocode to enrich name
-          if (!urlName) {
+          // If display name was generic coordinates or state/country is incomplete, reverse geocode to enrich
+          if (!immediateLocation.state || immediateLocation.country === 'Unknown' || !urlName) {
             try {
               const suggestion = await LocationService.reverseGeocode(lat, lng);
               if (suggestion) {
                 const stateName = suggestion.state || suggestion.region;
-                const displayName = suggestion.displayName || [suggestion.name, stateName, suggestion.country].filter(Boolean).filter((val, idx, arr) => arr.indexOf(val) === idx).join(', ');
+                const displayName =
+                  suggestion.displayName ||
+                  [suggestion.name, stateName, suggestion.country]
+                    .filter(Boolean)
+                    .filter((val, idx, arr) => arr.indexOf(val) === idx)
+                    .join(', ');
                 const enriched: LocationModel = {
                   ...immediateLocation,
                   name: suggestion.name,

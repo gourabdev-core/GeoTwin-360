@@ -62,7 +62,15 @@ export type ClimateIndicatorType =
   | 'sea_ice'
   | 'extreme_heat';
 
-export type TimelineStatus = 'observed' | 'year_to_date' | 'projected';
+export type TimelineStatus =
+  | 'OBSERVED'
+  | 'CURRENT/YTD'
+  | 'PROJECTED'
+  | 'MODELLED'
+  | 'UNAVAILABLE'
+  | 'observed'
+  | 'year_to_date'
+  | 'projected';
 
 export interface ClimateTimelineDataPoint {
   year: number;
@@ -71,6 +79,7 @@ export interface ClimateTimelineDataPoint {
   unit?: string;
   status: TimelineStatus;
   source: string;
+  methodology?: string;
   baseline: string;
   scenario?: string;
   scope?: 'global' | 'local' | 'regional';

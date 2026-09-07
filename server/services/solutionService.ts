@@ -286,7 +286,7 @@ export class SolutionService {
       id: 'sol-heat-mitig',
       title: 'High-Albedo Cool Roofs & Urban Forest Canopy Expansion',
       category: 'Heat mitigation',
-      problemAddressed: `Projected surface temperature reaching ${tempTrend.value.toFixed(1)}°C (${tempSign}${tempTrend.anomaly.toFixed(1)}°C above 2015-2024 baseline) with approximately ${risks.heat.extremeDays ?? 18} extreme heat days annually in ${locMeta.name}.`,
+      problemAddressed: `Projected surface temperature reaching ${tempTrend.value.toFixed(1)}°C (${tempSign}${tempTrend.anomaly.toFixed(1)}°C above 2015-2025 baseline [MODELED / LINEAR EXTRAPOLATION]) with approximately ${risks.heat.extremeDays ?? 18} extreme heat days annually in ${locMeta.name}.`,
       recommendedAction: 'Apply high-solar-reflectance (albedo >= 0.70) coatings on municipal and residential roofs, and plant native high-transpiration shade trees along public transit networks.',
       expectedBenefit: 'Reduces localized surface microclimate temperatures by 1.2°C to 2.3°C and cuts peak electrical air conditioning loads by up to 18%.',
       priority: heatPriority,

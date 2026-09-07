@@ -49,8 +49,8 @@ export async function runGeminiServiceTests() {
   GeminiService.resetCircuitBreaker();
   assert(GeminiService.isDailyQuotaExceeded() === false, 'Circuit breaker must be reset');
 
-  // Test 3: Error classification for transient errors
-  console.log('[Test 3] Verifying transient error classification...');
+  // Test 3: Error classification for transient errors & service unavailable
+  console.log('[Test 3] Verifying transient and service unavailable error classification...');
   const mockRpmError = {
     status: 429,
     message: 'Resource has been exhausted (e.g. check quota) - Rate limit exceeded: 5 requests per minute',
@@ -61,13 +61,22 @@ export async function runGeminiServiceTests() {
 
   const mock503Error = { status: 503, message: 'The model is overloaded. Please try again later.' };
   const classified503 = GeminiService.classifyError(mock503Error);
-  assert(classified503.code === 'GEMINI_SERVER_ERROR', 'Must classify 503 as GEMINI_SERVER_ERROR');
+  assert(classified503.code === 'GEMINI_SERVICE_UNAVAILABLE', 'Must classify 503 as GEMINI_SERVICE_UNAVAILABLE');
+  assert(classified503.statusCode === 503, 'Must retain statusCode 503');
   assert(classified503.isDailyQuota === false, '503 must not be daily quota');
+
+  const mockServiceUnavailableObj = { name: 'ServiceUnavailable', message: 'Service Unavailable' };
+  const classifiedUnavailable = GeminiService.classifyError(mockServiceUnavailableObj);
+  assert(classifiedUnavailable.code === 'GEMINI_SERVICE_UNAVAILABLE', 'Must classify ServiceUnavailable name as GEMINI_SERVICE_UNAVAILABLE');
 
   const mock401Error = { status: 401, message: 'API key not valid. Please pass a valid API key.' };
   const classified401 = GeminiService.classifyError(mock401Error);
   assert(classified401.code === 'GEMINI_INVALID_KEY', 'Must classify 401 as GEMINI_INVALID_KEY');
-  console.log('- Transient RPM, 503, and 401 correctly distinguished.');
+
+  const mock403Error = { status: 403, message: 'The caller does not have permission' };
+  const classified403 = GeminiService.classifyError(mock403Error);
+  assert(classified403.code === 'GEMINI_PERMISSION_DENIED', 'Must classify 403 as GEMINI_PERMISSION_DENIED');
+  console.log('- Transient RPM, 503 ServiceUnavailable, 401, and 403 correctly distinguished.');
   console.log('[Test 3] PASSED.\n');
 
   // Test 4: Cache Key Generation Determinism
@@ -82,8 +91,22 @@ export async function runGeminiServiceTests() {
   console.log(`- Deterministic SHA-256 Key 3: ${key3.substring(0, 16)}...`);
   console.log('[Test 4] PASSED.\n');
 
+  // Test 5: Daily Quota Circuit Breaker Pacific Midnight Reset
+  console.log('[Test 5] Verifying Daily Quota resets according to Pacific Time (PT)...');
+  const msPacific = GeminiService.getMillisecondsUntilMidnightPacific();
+  assert(typeof msPacific === 'number' && msPacific > 0, 'Pacific midnight diff must be positive number');
+  assert(msPacific <= 86400 * 1000 + 10000, 'Pacific midnight diff must be <= 24h + buffer');
+  console.log(`- Time until next midnight Pacific: ${Math.round(msPacific / 1000)}s (~${(msPacific / 3600000).toFixed(2)}h)`);
+
+  // Verify retry-after extraction from provider error message
+  const errWithRetry = { message: 'Quota exceeded. Please retry in 45s.' };
+  const extracted = GeminiService.extractRetryAfterMs(errWithRetry);
+  assert(extracted === 45000, 'Must correctly extract 45s retry delay from provider message');
+  console.log('- Retry delay extraction from provider response verified: 45000ms.');
+  console.log('[Test 5] PASSED.\n');
+
   console.log('============================================================');
-  console.log('GEMINI SERVICE TESTS SUMMARY: ALL 4 PASSED, 0 FAILED');
+  console.log('GEMINI SERVICE TESTS SUMMARY: ALL 5 PASSED, 0 FAILED');
   console.log('============================================================\n');
 }
 

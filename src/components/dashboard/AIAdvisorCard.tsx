@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles,
+  Cpu,
   AlertTriangle,
   RefreshCw,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
   Layers,
   Clock,
   Calendar,
+  Info,
 } from 'lucide-react';
 import { Card } from '../ui/Card.js';
 import { Button } from '../ui/Button.js';
@@ -27,6 +29,14 @@ interface AIAdvisorCardProps {
   solutionsLoading?: boolean;
   solutionsError?: string | null;
 }
+
+type ErrorClassification =
+  | 'DAILY_QUOTA'
+  | 'SERVICE_UNAVAILABLE'
+  | 'RATE_LIMIT'
+  | 'AUTH_CONFIG'
+  | 'NETWORK'
+  | 'GENERAL';
 
 const PRIORITY_STYLES: Record<string, string> = {
   HIGH: 'bg-red-500/20 text-red-400',
@@ -59,31 +69,126 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
   const [response, setResponse] = useState<AIAdvisorResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<ErrorClassification>('GENERAL');
   const [expanded, setExpanded] = useState<boolean>(true);
   const [showDistinction, setShowDistinction] = useState<boolean>(false);
 
-  const fetchRecommendations = useCallback(async () => {
-    if (!locationId) return;
+  // Invalidate state when location, target year, or scenario changes
+  // Restore from client session cache if previously generated, without making network requests
+  useEffect(() => {
+    if (!locationId) {
+      setResponse(null);
+      setError(null);
+      return;
+    }
 
-    setLoading(true);
-    setError(null);
-    setResponse(null);
+    const cached = advisorService.getCachedRecommendations(
+      locationId,
+      targetYear,
+      scenario,
+      simulationResult?.simulationId
+    );
 
-    try {
-      const data = await advisorService.getRecommendations(
-        locationId,
-        targetYear,
-        scenario,
-        simulationResult?.simulationId
-      );
-      setResponse(data);
-    } catch (err: any) {
-      const message = sanitizeErrorMessage(err, 'AI recommendations could not be generated.');
-      setError(message);
-    } finally {
-      setLoading(false);
+    if (cached) {
+      setResponse(cached);
+      setError(null);
+    } else {
+      setResponse(null);
+      setError(null);
     }
   }, [locationId, targetYear, scenario, simulationResult?.simulationId]);
+
+  const fetchRecommendations = useCallback(
+    async (mode: 'ai' | 'deterministic' = 'ai', forceRefresh = false) => {
+      if (!locationId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await advisorService.getRecommendations(
+          locationId,
+          targetYear,
+          scenario,
+          simulationResult?.simulationId,
+          mode,
+          forceRefresh
+        );
+        setResponse(data);
+      } catch (err: any) {
+        const rawMsg = String(err?.message || '').toLowerCase();
+        const code = err?.code || err?.response?.data?.error?.code || '';
+        const status = err?.status || err?.response?.status || 500;
+
+        if (
+          code === 'GEMINI_DAILY_QUOTA_EXCEEDED' ||
+          rawMsg.includes('daily quota') ||
+          rawMsg.includes('generaterequestsperday') ||
+          rawMsg.includes('free_tier_requests') ||
+          rawMsg.includes('limit: 20')
+        ) {
+          setErrorType('DAILY_QUOTA');
+          setError(
+            'AI analysis is temporarily unavailable because the Gemini daily quota has been reached. Core GeoTwin features remain fully available.'
+          );
+        } else if (
+          code === 'GEMINI_SERVICE_UNAVAILABLE' ||
+          code === 'GEMINI_SERVER_ERROR' ||
+          code === 'ServiceUnavailable' ||
+          code === 'UNAVAILABLE' ||
+          status === 503 ||
+          rawMsg.includes('serviceunavailable') ||
+          rawMsg.includes('service unavailable') ||
+          rawMsg.includes('model is overloaded') ||
+          rawMsg.includes('overloaded')
+        ) {
+          setErrorType('SERVICE_UNAVAILABLE');
+          setError(
+            'Gemini AI reasoning service is temporarily unavailable. Core GeoTwin features remain fully operational.'
+          );
+        } else if (
+          code === 'GEMINI_INVALID_KEY' ||
+          code === 'GEMINI_NOT_CONFIGURED' ||
+          code === 'GEMINI_PERMISSION_DENIED' ||
+          status === 401 ||
+          status === 403 ||
+          rawMsg.includes('api key') ||
+          rawMsg.includes('unauthenticated') ||
+          rawMsg.includes('billing')
+        ) {
+          setErrorType('AUTH_CONFIG');
+          setError(
+            'AI Advisor configuration error. GEMINI_API_KEY is not configured or invalid on the server. Core GeoTwin features remain operational.'
+          );
+        } else if (
+          code === 'GEMINI_NETWORK_ERROR' ||
+          code === 'NETWORK_ERROR' ||
+          !navigator.onLine ||
+          rawMsg.includes('network') ||
+          rawMsg.includes('fetch failed')
+        ) {
+          setErrorType('NETWORK');
+          setError(
+            'AI service is temporarily unreachable due to network connectivity. Core GeoTwin features remain operational.'
+          );
+        } else if (
+          code === 'GEMINI_RATE_LIMIT_EXCEEDED' ||
+          code === 'RATE_LIMIT_EXCEEDED' ||
+          code === 'RESOURCE_EXHAUSTED' ||
+          status === 429
+        ) {
+          setErrorType('RATE_LIMIT');
+          setError('AI rate limit reached. Please retry in a few moments or view model-based analysis.');
+        } else {
+          setErrorType('GENERAL');
+          setError(sanitizeErrorMessage(err, 'AI recommendations could not be generated.'));
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [locationId, targetYear, scenario, simulationResult?.simulationId]
+  );
 
   // Render: No location selected
   if (!locationId) {
@@ -95,7 +200,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
         </h3>
         <div className="flex-grow flex items-center justify-center">
           <p className="text-xs text-text-silver text-center italic">
-            Select a location to get AI-powered recommendations.
+            Select a location to get climate recommendations.
           </p>
         </div>
       </Card>
@@ -108,7 +213,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
       <Card className="flex flex-col min-h-[200px]">
         <h3 className="text-base font-title font-bold text-text-base mb-2 flex items-center gap-2">
           <Sparkles size={18} className="text-spotify-green" />
-          <span>AI Advisor</span>
+          <span>Climate Advisory Intelligence</span>
         </h3>
         <div className="flex-grow flex flex-col items-center justify-center space-y-3 py-6">
           <div className="relative">
@@ -129,50 +234,114 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
   if (error) {
     return (
       <Card className="flex flex-col min-h-[200px]">
-        <h3 className="text-base font-title font-bold text-text-base mb-2 flex items-center gap-2">
-          <Sparkles size={18} className="text-spotify-green" />
-          <span>AI Advisor</span>
-        </h3>
-        <div className="flex-grow flex flex-col items-center justify-center space-y-3 py-4">
-          <AlertTriangle size={24} className="text-red-400" />
-          <p className="text-xs text-red-400 text-center max-w-[280px]">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-title font-bold text-text-base flex items-center gap-2">
+            <AlertTriangle size={18} className="text-amber-400" />
+            <span>Climate Advisory Status</span>
+          </h3>
+          <span className="text-[10px] text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+            {errorType === 'DAILY_QUOTA'
+              ? 'Daily Quota Limit'
+              : errorType === 'SERVICE_UNAVAILABLE'
+              ? 'Service Temporarily Unavailable'
+              : errorType === 'AUTH_CONFIG'
+              ? 'Configuration Notice'
+              : errorType === 'NETWORK'
+              ? 'Network Offline'
+              : 'Service Notice'}
+          </span>
+        </div>
+
+        <div className="flex-grow flex flex-col items-center justify-center space-y-3 py-4 text-center">
+          <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-400">
+            <Info size={22} />
+          </div>
+          <p className="text-xs text-text-base max-w-[340px] leading-relaxed font-medium">
             {error}
           </p>
-          <Button variant="outline" size="sm" onClick={fetchRecommendations}>
-            <RefreshCw size={14} className="mr-2" />
-            Retry
-          </Button>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+            {/* View System/Model-Based Analysis Option (Always available without Gemini) */}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => fetchRecommendations('deterministic')}
+              className="text-xs flex items-center gap-1.5"
+            >
+              <Cpu size={14} />
+              <span>View System / Model Analysis</span>
+            </Button>
+
+            {/* Only show Retry when not a daily quota or configuration error */}
+            {errorType !== 'DAILY_QUOTA' && errorType !== 'AUTH_CONFIG' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchRecommendations('ai', true)}
+                className="text-xs"
+              >
+                <RefreshCw size={13} className="mr-1.5" />
+                Retry
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
     );
   }
 
-  // Render: Response state
+  // Render: Response state (Distinctly handles AI-Generated vs System/Model-Based)
   if (response) {
     const climateText = response.climateExplanation || response.summary;
     const risksList = response.mainRisks || response.keyProblems || [];
     const actionsList = response.recommendedActions || response.recommendations || [];
     const shortTerm = response.shortTermRecommendations || [];
     const longTerm = response.longTermRecommendations || [];
+    const isMockedAI = response.analysisType === 'MOCKED_AI' || response.model?.provider?.toLowerCase().includes('mock');
+    const isModelBased = !isMockedAI && (Boolean(response.isFallback) || response.analysisType === 'SYSTEM_MODEL_BASED');
 
     return (
       <Card className="flex flex-col">
+        {/* Header with explicit provenance indication */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-title font-bold text-text-base flex items-center gap-2">
-            <Sparkles size={18} className="text-spotify-green" />
-            <span>AI Advisor</span>
+            {isModelBased ? (
+              <Cpu size={18} className="text-cyan-400 shrink-0" />
+            ) : isMockedAI ? (
+              <Sparkles size={18} className="text-amber-400 shrink-0" />
+            ) : (
+              <Sparkles size={18} className="text-spotify-green shrink-0" />
+            )}
+            <span>
+              {isModelBased
+                ? 'System / Model-Based Analysis'
+                : isMockedAI
+                ? 'AI Advisor Analysis (Mocked)'
+                : 'AI Advisor Analysis'}
+            </span>
           </h3>
+
           <div className="flex items-center gap-2">
-            {response.isFallback && (
-              <span className="text-[10px] text-amber-300 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
-                Deterministic Fallback
+            {isModelBased ? (
+              <span className="text-[10px] text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold">
+                Type B: Deterministic Rules
+              </span>
+            ) : isMockedAI ? (
+              <span className="text-[10px] text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                Type C: Mocked AI Fixture
+              </span>
+            ) : (
+              <span className="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                Type C: Google Gemini AI
               </span>
             )}
+
             {response.dataContext.hasSimulationData && (
               <span className="text-[10px] text-black bg-spotify-green px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
                 Simulation-Aware
               </span>
             )}
+
             <button
               onClick={() => setExpanded(!expanded)}
               className="p-1 text-text-silver hover:text-text-base transition-colors rounded"
@@ -185,21 +354,42 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
 
         {expanded && (
           <div className="space-y-4">
-            {/* Fallback Notice Banner if applicable */}
-            {response.isFallback && response.fallbackReason && (
+            {/* Informational Provenance Banner: Transparent Attribution */}
+            {isModelBased ? (
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-md p-2.5 text-[11px] text-cyan-300 flex items-start gap-2">
+                <ShieldCheck size={14} className="shrink-0 mt-0.5 text-cyan-400" />
+                <div className="leading-snug">
+                  <span className="font-bold">System/Model-Based Analysis: </span>
+                  Generated by GeoTwin&apos;s deterministic climate models and verified satellite observations. Gemini AI was not used for this assessment.
+                  {response.fallbackReason && (
+                    <span className="block text-cyan-400/80 text-[10px] mt-0.5">
+                      Status: {response.fallbackReason}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : isMockedAI ? (
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2.5 text-[11px] text-amber-300 flex items-start gap-2">
-                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">Notice: </span>
-                  {response.fallbackReason}
+                <Sparkles size={14} className="shrink-0 mt-0.5 text-amber-400" />
+                <div className="leading-snug">
+                  <span className="font-bold">Mocked AI Development Layer: </span>
+                  Synthesized using offline mock fixtures for development and testing without consuming live Gemini API quota.
+                </div>
+              </div>
+            ) : (
+              <div className="bg-spotify-green/10 border border-spotify-green/20 rounded-md p-2.5 text-[11px] text-text-silver flex items-start gap-2">
+                <Sparkles size={14} className="shrink-0 mt-0.5 text-spotify-green" />
+                <div className="leading-snug">
+                  <span className="font-bold text-text-base">AI Reasoning Layer: </span>
+                  Qualitative decision-support synthesis generated by Google Gemini 3.6 Flash reasoning strictly over verified NASA observations and sensor telemetry.
                 </div>
               </div>
             )}
 
-            {/* 1. Plain-Language Climate Explanation */}
+            {/* 1. Plain-Language Climate Assessment */}
             <div>
               <h4 className="text-[11px] font-bold text-text-base uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-spotify-green" />
+                <span className={`w-1.5 h-1.5 rounded-full ${isModelBased ? 'bg-cyan-400' : 'bg-spotify-green'}`} />
                 Climate Assessment
               </h4>
               <p className="text-xs text-text-silver leading-relaxed bg-mid-dark/50 p-2.5 rounded-lg border border-light-border/40">
@@ -239,8 +429,8 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
             {actionsList.length > 0 && (
               <div>
                 <h4 className="text-[11px] font-bold text-text-base uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green" />
-                  Recommended Interventions
+                  <span className={`w-1.5 h-1.5 rounded-full ${isModelBased ? 'bg-cyan-400' : 'bg-spotify-green'}`} />
+                  {isModelBased ? 'Deterministic Resilience Measures' : 'Recommended Interventions'}
                 </h4>
                 <div className="space-y-3">
                   {actionsList.map((rec: AIRecommendation, i: number) => (
@@ -403,20 +593,37 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
               </div>
             )}
 
-            {/* Footer: Model Attribution + Refresh */}
+            {/* Footer: Model Attribution + Action Buttons */}
             <div className="flex items-center justify-between pt-2 border-t border-light-border">
-              <span className="text-[10px] text-text-silver/60">
-                Engine: {response.model.provider} {response.model.name}
+              <span className="text-[10px] text-text-silver/70">
+                {isModelBased
+                  ? 'Source: GeoTwin Deterministic Assessment (Rules-Based)'
+                  : `Engine: ${response.model.provider} ${response.model.name}`}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchRecommendations}
-                className="text-[10px] py-1 px-3"
-              >
-                <RefreshCw size={12} className="mr-1.5" />
-                Refresh
-              </Button>
+
+              <div className="flex items-center gap-2">
+                {isModelBased ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchRecommendations('ai', true)}
+                    className="text-[10px] py-1 px-2.5 flex items-center gap-1"
+                  >
+                    <Sparkles size={11} className="text-spotify-green" />
+                    <span>Try Gemini AI</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchRecommendations('ai', true)}
+                    className="text-[10px] py-1 px-2.5"
+                  >
+                    <RefreshCw size={11} className="mr-1" />
+                    Refresh
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -424,7 +631,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
     );
   }
 
-  // Render: Default state (ready to generate)
+  // Render: Default state (ready to generate on explicit user demand)
   return (
     <Card className="flex flex-col justify-between min-h-[200px]">
       <div>
@@ -488,15 +695,26 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
         )}
       </div>
 
-      <div className="pt-3 border-t border-border-gray/40 flex justify-center">
+      <div className="pt-3 border-t border-border-gray/40 flex flex-col sm:flex-row gap-2 justify-center">
         <Button
           variant="primary"
           size="sm"
-          onClick={fetchRecommendations}
-          className="w-full flex items-center justify-center gap-1.5"
+          onClick={() => fetchRecommendations('ai')}
+          className="flex-1 flex items-center justify-center gap-1.5"
         >
           <Sparkles size={14} />
           <span>{resilienceSolutions.length > 0 ? 'Generate AI Strategic Analysis' : 'Get AI Recommendations'}</span>
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchRecommendations('deterministic')}
+          className="flex items-center justify-center gap-1.5 text-xs text-text-silver hover:text-text-base"
+          title="Compute deterministic domain-grounded recommendations without invoking Gemini AI"
+        >
+          <Cpu size={14} className="text-cyan-400" />
+          <span>Model Rules</span>
         </Button>
       </div>
     </Card>

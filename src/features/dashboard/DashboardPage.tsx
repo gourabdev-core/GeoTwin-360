@@ -190,10 +190,10 @@ export const DashboardPage: React.FC = () => {
     setSimulationResult(null);
     setReportError(null);
     setReportGenerating(false);
-  }, [selectedLocation?.id]);
+  }, [selectedLocation?.id, selectedLocation?.latitude, selectedLocation?.longitude]);
 
   // 1. Fetch location-specific baseline data (Observed current risks)
-  // Only runs when selectedLocation.id changes, preventing duplicate requests
+  // Only runs when selectedLocation changes, preventing duplicate requests
   useEffect(() => {
     if (!selectedLocation?.id) return;
     const reqId = currentRequestIdRef.current;
@@ -213,7 +213,7 @@ export const DashboardPage: React.FC = () => {
           setCurrentFloodRiskLevel(null);
         }
       });
-  }, [selectedLocation?.id]);
+  }, [selectedLocation?.id, selectedLocation?.latitude, selectedLocation?.longitude]);
 
   // 2. Fetch scenario & future projection data (Climate Overview, Target Risk, Future Projections, Solutions)
   // Runs when location, year, or scenario changes
@@ -283,7 +283,7 @@ export const DashboardPage: React.FC = () => {
           setSolutionsLoading(false);
         }
       });
-  }, [selectedLocation?.id, selectedYear, selectedScenario]);
+  }, [selectedLocation?.id, selectedLocation?.latitude, selectedLocation?.longitude, selectedYear, selectedScenario]);
 
   // Reflect simulation results on climate indicators when a simulation has been run
   const displayedMetrics = useMemo(() => {
@@ -592,6 +592,7 @@ export const DashboardPage: React.FC = () => {
                 longitude={selectedLocation?.longitude ?? 0}
                 locationName={selectedLocation?.name || 'Unknown'}
                 year={selectedYear}
+                scenario={selectedScenario}
                 heatRiskLevel={displayedHeatRisk}
                 floodRiskLevel={displayedFloodRisk}
                 metrics={displayedMetrics}
@@ -623,6 +624,8 @@ export const DashboardPage: React.FC = () => {
                   error={climateError}
                   floodRiskLoading={floodRiskLoading}
                   floodRiskError={floodRiskError}
+                  year={selectedYear}
+                  scenario={selectedScenario}
                 />
               </Card>
             </div>

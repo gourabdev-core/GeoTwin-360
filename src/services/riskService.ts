@@ -5,6 +5,7 @@ export interface RiskMetricResponse {
   metric: string;
   year: number;
   score: number | null;
+  unit?: string;
   level: string | null;
   dataType: string;
 }
@@ -14,6 +15,7 @@ export interface RiskMapFeature {
   geometry: any;
   properties: {
     riskScore: number | null;
+    unit?: string;
     riskLevel: string;
     source?: string;
     metadata?: any;

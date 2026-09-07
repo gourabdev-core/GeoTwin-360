@@ -11,6 +11,7 @@ interface ClimateMapProps {
   longitude: number;
   locationName: string;
   year: number;
+  scenario?: string;
   heatRiskLevel?: string | null;
   floodRiskLevel?: string | null;
   metrics?: ClimateMetrics | null;
@@ -44,6 +45,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   longitude,
   locationName,
   year,
+  scenario = 'default',
   heatRiskLevel = null,
   floodRiskLevel = null,
   metrics = null,
@@ -107,7 +109,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     }
   };
 
-  // Fetch active overlay features when activeOverlay, locationId, or year changes
+  // Fetch active overlay features when activeOverlay, locationId, year, or scenario changes
   useEffect(() => {
     if (!activeOverlay) {
       setOverlayFeatures([]);
@@ -127,7 +129,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
         if (activeOverlay === 'water') metricParam = 'water_stress';
         if (activeOverlay === 'green') metricParam = 'green_cover';
 
-        const data = await riskService.getRiskMapData(locationId, metricParam, year);
+        const data = await riskService.getRiskMapData(locationId, metricParam, year, { scenario });
         if (isMounted) {
           if (data && data.features && data.features.length > 0) {
             setOverlayFeatures(data.features);
@@ -155,7 +157,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeOverlay, locationId, year]);
+  }, [activeOverlay, locationId, year, scenario]);
 
   const handleToggleOverlay = (layerId: string) => {
     setActiveOverlay((prev) => (prev === layerId ? null : layerId));
@@ -326,7 +328,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
 
         {activeOverlay && overlayFeatures.length > 0 && (
           <GeoJSON
-            key={`${locationId}-${year}-${activeOverlay}-${overlayFeatures.length}`}
+            key={`${locationId}-${year}-${scenario || 'default'}-${activeOverlay}-${overlayFeatures.length}`}
             data={{
               type: 'FeatureCollection',
               features: overlayFeatures,
@@ -354,12 +356,15 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
               const source = feature?.properties?.source;
               const dataType = feature?.properties?.metadata?.dataType || feature?.properties?.dataType || 'PROJECTED';
               if (level) {
+                const scoreDisplay = typeof score === 'number' && !isNaN(score)
+                  ? `<div><span class="font-semibold">Score:</span> ${score.toFixed(4)}</div>`
+                  : '';
                 layer.bindPopup(`
                   <div class="text-near-black p-1 bg-white font-sans rounded">
                     <h4 class="font-bold text-xs mb-0.5">${layers.find((l) => l.id === activeOverlay)?.name} Risk Zone</h4>
                     <div class="text-[11px] space-y-1">
                       <div><span class="font-semibold">Level:</span> ${level.replace('_', ' ')}</div>
-                      ${score !== null ? `<div><span class="font-semibold">Score:</span> ${score.toFixed(4)}</div>` : ''}
+                      ${scoreDisplay}
                       ${dataType ? `<div><span class="font-semibold">Data Type:</span> ${dataType}</div>` : ''}
                       ${source ? `<div><span class="font-semibold">Source:</span> ${source}</div>` : ''}
                     </div>

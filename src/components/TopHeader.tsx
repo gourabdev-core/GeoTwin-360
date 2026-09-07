@@ -9,10 +9,11 @@ import { useAuth } from '../context/AuthContext.js';
 
 interface TopHeaderProps {
   onToggleSidebar: () => void;
+  sidebarOpen?: boolean;
   currentUser?: any;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
+export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const { user: authUser, profile, signOut: handleSignOut } = useAuth();
   const { selectedLocation, selectLocation, clearLocation, formatLocationName } = useLocation();
   const { status: weatherStatus, weather } = useWeather();
@@ -89,6 +90,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
     return err && (err.__CANCEL__ === true || err.code === 'ERR_CANCELED');
   };
 
+  // Debounced auto-search as user types
+  useEffect(() => {
+    if (!isTypingRef.current) return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      executeSearch(trimmed);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
   // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -104,11 +122,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     isTypingRef.current = true;
-    setQuery(e.target.value);
+    const val = e.target.value;
+    setQuery(val);
     setSearchError(null);
+    if (val.trim().length >= 2) {
+      setIsOpen(true);
+    } else {
+      setResults([]);
+      setIsOpen(false);
+    }
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -177,8 +201,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
     <header className="h-20 bg-near-black border-b border-border-gray flex items-center justify-between px-6 z-40">
       <div className="flex items-center space-x-4 flex-1 max-w-lg relative" ref={containerRef}>
         <button
+          type="button"
           onClick={onToggleSidebar}
-          className="p-2 text-text-silver hover:text-text-base md:hidden focus:outline-none"
+          className="p-2 text-text-silver hover:text-text-base hover:bg-mid-dark rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-spotify-green flex-shrink-0"
+          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          id="toggle-sidebar-btn"
         >
           <Menu size={20} />
         </button>
@@ -206,6 +234,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
             autoComplete="off"
             id="global-location-search"
             aria-label="Search for a location"
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls="search-results-listbox"
+            aria-autocomplete="list"
+            aria-activedescendant={activeIndex >= 0 ? `search-option-${activeIndex}` : undefined}
           />
           {query && (
             <button
@@ -218,7 +251,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
           )}
 
           {/* Results Dropdown Menu */}
-          {isOpen && (searchLoading || searchError || results.length > 0 || (!searchLoading && query.trim().length >= 2)) && (
+          {isOpen && (searchLoading || searchError || results.length > 0 || (!searchLoading && isTypingRef.current && query.trim().length >= 2)) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-mid-dark border border-border-gray rounded-lg shadow-heavy z-50 max-h-64 overflow-y-auto">
               {searchLoading && (
                 <div className="p-4 text-xs text-text-silver text-center flex items-center justify-center space-x-2">
@@ -227,8 +260,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
                 </div>
               )}
               {searchError && (
-                <div className="p-4 text-xs text-text-negative text-center">
-                  {searchError}
+                <div className="p-4 text-xs text-text-negative text-center flex flex-col items-center gap-2">
+                  <span>{searchError}</span>
+                  <button
+                    type="button"
+                    onClick={() => executeSearch(query)}
+                    className="text-xs text-spotify-green hover:underline cursor-pointer font-bold"
+                  >
+                    Retry Search
+                  </button>
                 </div>
               )}
               {!searchLoading && !searchError && results.length === 0 && (
@@ -241,6 +281,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
                   {results.map((result, idx) => (
                     <li
                       key={`${result.latitude}-${result.longitude}-${idx}`}
+                      id={`search-option-${idx}`}
                       role="option"
                       aria-selected={activeIndex === idx}
                       onClick={() => handleSelect(result)}
@@ -424,8 +465,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
                 {authUser.email || 'Sustainability Lead'}
               </p>
             </div>
-            <div className="h-9 w-9 bg-mid-dark rounded-full flex items-center justify-center text-text-silver border border-border-gray">
-              <User size={18} />
+            <div className="h-9 w-9 bg-mid-dark rounded-full flex items-center justify-center text-text-silver border border-border-gray overflow-hidden">
+              {profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture ? (
+                <img
+                  src={profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture}
+                  alt={profile?.full_name || 'User'}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <User size={18} />
+              )}
             </div>
             <button
               onClick={async () => {

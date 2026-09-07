@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   TrendingUp,
   Thermometer,
@@ -43,8 +44,86 @@ import {
 
 export const PredictionsPage: React.FC = () => {
   const { selectedLocation } = useLocation();
-  const [selectedYear, setSelectedYear] = useState<number>(2035);
-  const [selectedScenario, setSelectedScenario] = useState<ScenarioType>('default');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedYear, setSelectedYearState] = useState<number>(() => {
+    const param = searchParams.get('year');
+    if (param) {
+      const parsed = parseInt(param, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+    }
+    try {
+      const stored = localStorage.getItem('geotwin_selected_year');
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if ([2030, 2035, 2040, 2050].includes(parsed)) return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+    return 2035;
+  });
+
+  const [selectedScenario, setSelectedScenarioState] = useState<ScenarioType>(() => {
+    const param = searchParams.get('scenario') as ScenarioType;
+    if (param && ['default', 'resilience', 'accelerated'].includes(param)) return param;
+    try {
+      const stored = localStorage.getItem('geotwin_selected_scenario') as ScenarioType;
+      if (stored && ['default', 'resilience', 'accelerated'].includes(stored)) return stored;
+    } catch {
+      // Ignore
+    }
+    return 'default';
+  });
+
+  const setSelectedYear = (year: number) => {
+    setSelectedYearState(year);
+    try {
+      localStorage.setItem('geotwin_selected_year', String(year));
+    } catch {
+      // Ignore
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('year', String(year));
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  const setSelectedScenario = (scenario: ScenarioType) => {
+    setSelectedScenarioState(scenario);
+    try {
+      localStorage.setItem('geotwin_selected_scenario', scenario);
+    } catch {
+      // Ignore
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('scenario', scenario);
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  // Sync external searchParam updates (browser back/forward)
+  useEffect(() => {
+    const paramYear = searchParams.get('year');
+    if (paramYear) {
+      const parsed = parseInt(paramYear, 10);
+      if ([2030, 2035, 2040, 2050].includes(parsed) && parsed !== selectedYear) {
+        setSelectedYearState(parsed);
+      }
+    }
+    const paramScenario = searchParams.get('scenario') as ScenarioType;
+    if (paramScenario && ['default', 'resilience', 'accelerated'].includes(paramScenario) && paramScenario !== selectedScenario) {
+      setSelectedScenarioState(paramScenario);
+    }
+  }, [searchParams, selectedYear, selectedScenario]);
 
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [projectionData, setProjectionData] = useState<any[]>([]);
@@ -60,6 +139,10 @@ export const PredictionsPage: React.FC = () => {
 
   const fetchPredictionAnalysis = async () => {
     if (!selectedLocation?.id) return;
+    setHistoricalData([]);
+    setProjectionData([]);
+    setModelInfo(null);
+    setAnalysisModel(null);
     setLoading(true);
     setError(null);
     try {
@@ -899,7 +982,7 @@ export const PredictionsPage: React.FC = () => {
                   <span>Scientific Honesty & Methodology Notice</span>
                 </h4>
                 <p className="text-xs text-text-silver leading-relaxed">
-                  The climate projections displayed above are mathematically calculated using **Ordinary Least Squares (OLS) Linear Regression** based on 10 years of satellite observations (2015-2024) retrieved directly from the NASA POWER dataset, modulated by scenario radiative forcing parameters.
+                  The climate projections displayed above are mathematically calculated using **Ordinary Least Squares (OLS) Linear Regression** [MODELED / LINEAR EXTRAPOLATION] based on 11 years of satellite observations (2015-2025) retrieved directly from the NASA POWER dataset, modulated by scenario radiative forcing parameters.
                 </p>
                 <p className="text-xs text-text-silver leading-relaxed font-bold">
                   Methodology Disclosures & Limitations:

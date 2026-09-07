@@ -17,13 +17,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   mode: initialMode,
   onAuthSuccess,
 }) => {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithGoogleDemo } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [providerNotConfigured, setProviderNotConfigured] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -38,6 +39,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
+    setProviderNotConfigured(false);
 
     try {
       if (mode === 'signin') {
@@ -80,15 +82,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
+    setProviderNotConfigured(false);
     try {
       const result = await signInWithGoogle();
       if (!result.success) {
+        if (result.providerNotConfigured) {
+          setProviderNotConfigured(true);
+        }
         setError(result.error || 'Google sign-in was canceled or failed.');
         return;
       }
       onClose();
     } catch (err: any) {
       setError(sanitizeErrorMessage(err, 'An error occurred during Google Sign-In.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleDemoLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await signInWithGoogleDemo();
+      if (res.success) {
+        onAuthSuccess?.({
+          name: 'Alex Chen',
+          role: 'Sustainability Lead',
+          email: 'alex.chen.climate@gmail.com',
+        });
+        onClose();
+      } else {
+        setError(res.error || 'Failed to sign in with Google demo account.');
+      }
+    } catch (err: any) {
+      setError(sanitizeErrorMessage(err, 'An error occurred with demo Google account.'));
     } finally {
       setLoading(false);
     }
@@ -209,18 +237,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Google Auth Button */}
         <button
+          type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full bg-transparent hover:bg-mid-dark text-text-base border border-border-gray font-semibold text-xs py-2 rounded transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          className="w-full bg-[#181b20] hover:bg-[#22272e] text-text-base border border-border-gray hover:border-gray-500 font-semibold text-xs py-2.5 rounded-lg transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-sm"
         >
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
             <path
+              fill="#4285F4"
+              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.28 14.27A7.17 7.17 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.97 11.97 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"
+            />
+            <path
               fill="#EA4335"
-              d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.626 5.626 0 0 1 8.35 12.98a5.626 5.626 0 0 1 5.64-5.625c2.42 0 4.303 1.05 5.23 1.955l3.245-3.21C20.35 4.14 17.433 2.76 13.99 2.76a10.22 10.22 0 0 0-10.23 10.22a10.22 10.22 0 0 0 10.23 10.22c5.96 0 10.37-4.22 10.37-10.51c0-.67-.06-1.12-.19-1.425z"
+              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.93 6.72-4.93z"
             />
           </svg>
-          <span>Continue with Google</span>
+          <span>{mode === 'signin' ? 'Sign In with Google' : 'Sign Up with Google'}</span>
         </button>
+
+        {/* Development / Demo Google Fallback */}
+        {providerNotConfigured && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-left space-y-2">
+            <p className="text-[11px] text-amber-300 leading-snug">
+              Google OAuth provider is not yet enabled in the Supabase project dashboard. You can sign in immediately using the test Google account below:
+            </p>
+            <button
+              type="button"
+              onClick={handleGoogleDemoLogin}
+              disabled={loading}
+              className="w-full py-1.5 bg-amber-400 hover:bg-amber-300 text-black font-semibold text-[11px] rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Continue with Google (Demo Account)</span>
+            </button>
+          </div>
+        )}
 
         {/* Toggle Mode Link */}
         <div className="text-center pt-2">

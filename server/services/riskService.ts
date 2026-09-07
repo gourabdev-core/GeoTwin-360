@@ -9,6 +9,7 @@ export interface RiskResult {
   metric: string;
   year: number;
   score: number | null;
+  unit: string;
   level: RiskLevel | 'UNAVAILABLE';
   contributingFactors: string[];
   source: {
@@ -63,17 +64,18 @@ export class RiskService {
             let computedScore = (tempVal - minTemp) / (maxTemp - minTemp);
             if (activeScenario === 'resilience') computedScore *= 0.85;
             if (activeScenario === 'accelerated') computedScore *= 1.20;
-            const score = parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
-            const level = getRiskLevelFromScore(score);
+            const score = isNaN(computedScore) ? null : parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
+            const level = score !== null ? getRiskLevelFromScore(score) : 'UNAVAILABLE';
             return {
               locationId,
               metric: normalizedMetric,
               year: targetYear,
               score,
+              unit: 'score (0-1)',
               level,
               contributingFactors: [
                 `Projected temperature for ${targetYear} is ${tempVal.toFixed(1)}°C (Scenario: ${activeScenario.toUpperCase()}).`,
-                `Based on OLS regression from NASA POWER historical data (2015-2024).`,
+                `Based on OLS regression from NASA POWER historical data (2015-2025) [MODELED / LINEAR EXTRAPOLATION].`,
                 `Projection confidence (R²): ${projection.confidence !== null ? (projection.confidence * 100).toFixed(1) + '%' : 'N/A'}.`,
               ],
               source: {
@@ -92,17 +94,18 @@ export class RiskService {
             let computedScore = (precipVal - minPrecip) / (maxPrecip - minPrecip);
             if (activeScenario === 'resilience') computedScore *= 0.70;
             if (activeScenario === 'accelerated') computedScore *= 1.25;
-            const score = parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
-            const level = getRiskLevelFromScore(score);
+            const score = isNaN(computedScore) ? null : parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
+            const level = score !== null ? getRiskLevelFromScore(score) : 'UNAVAILABLE';
             return {
               locationId,
               metric: normalizedMetric,
               year: targetYear,
               score,
+              unit: 'score (0-1)',
               level,
               contributingFactors: [
                 `Projected avg precipitation for ${targetYear} is ${precipVal.toFixed(2)} mm/day (Scenario: ${activeScenario.toUpperCase()}).`,
-                `Based on OLS regression from NASA POWER historical data (2015-2024).`,
+                `Based on OLS regression from NASA POWER historical data (2015-2025) [MODELED / LINEAR EXTRAPOLATION].`,
                 `Projection confidence (R²): ${projection.precipRSquared !== null ? (projection.precipRSquared * 100).toFixed(1) + '%' : 'N/A'}.`,
               ],
               source: {
@@ -124,6 +127,7 @@ export class RiskService {
         metric: normalizedMetric,
         year: targetYear,
         score: null,
+        unit: 'score (0-1)',
         level: 'UNAVAILABLE',
         contributingFactors: [`Future risk projection for ${metric} in ${targetYear} is not yet supported for this metric.`],
         source: null,
@@ -158,6 +162,7 @@ export class RiskService {
         metric: normalizedMetric,
         year: targetYear,
         score: null,
+        unit: 'score (0-1)',
         level: 'UNAVAILABLE',
         contributingFactors: [`Data for ${metric} risk is not available in the current data layer.`],
         source: null,
@@ -195,6 +200,7 @@ export class RiskService {
           metric: normalizedMetric,
           year: targetYear,
           score: cached.score !== null ? Number(cached.score) : null,
+          unit: 'score (0-1)',
           level: cached.level as RiskLevel,
           contributingFactors: cached.metadata?.contributingFactors || [],
           source: cached.source ? {
@@ -224,11 +230,11 @@ export class RiskService {
       const current = await ClimateService.getCurrentClimate(lat, lng);
       
       const tempVal = current.feelsLike !== null ? current.feelsLike : current.temperature;
-      if (tempVal !== null) {
+      if (tempVal !== null && !isNaN(tempVal)) {
         const { minTemp, maxTemp } = RISK_THRESHOLDS.heat;
         const computedScore = (tempVal - minTemp) / (maxTemp - minTemp);
-        score = parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
-        level = getRiskLevelFromScore(score);
+        score = isNaN(computedScore) ? null : parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
+        level = score !== null ? getRiskLevelFromScore(score) : 'UNAVAILABLE';
         dataType = 'OBSERVED';
         confidence = current.source === 'MockWeather' ? 'MEDIUM' : 'HIGH';
         sourceData = {
@@ -259,8 +265,8 @@ export class RiskService {
 
         const { minPrecip, maxPrecip } = RISK_THRESHOLDS.flood;
         const computedScore = (avgPrecip - minPrecip) / (maxPrecip - minPrecip);
-        score = parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
-        level = getRiskLevelFromScore(score);
+        score = isNaN(computedScore) ? null : parseFloat(Math.max(0, Math.min(1, computedScore)).toFixed(4));
+        level = score !== null ? getRiskLevelFromScore(score) : 'UNAVAILABLE';
         dataType = 'HISTORICAL';
         confidence = 'HIGH';
         sourceData = {
@@ -273,7 +279,7 @@ export class RiskService {
 
         contributingFactors = [
           `Average daily precipitation over 10 years is ${avgPrecip.toFixed(2)} mm/day.`,
-          `Analysis based on NASA POWER historical dataset (2015-2024).`,
+          `Analysis based on NASA POWER historical dataset (2015-2025).`,
           `Precipitation bounds over this period: Min ${minVal.toFixed(2)} mm/day, Max ${maxVal.toFixed(2)} mm/day.`,
         ];
       } else {
@@ -286,6 +292,7 @@ export class RiskService {
       metric: normalizedMetric,
       year: targetYear,
       score,
+      unit: 'score (0-1)',
       level,
       contributingFactors,
       source: sourceData,
@@ -328,9 +335,14 @@ export class RiskService {
   }
 
   /**
-   * Get risk map/spatial data containing GeoJSON geometry overlays.
+   * Get risk map data as GeoJSON features with scenario support
    */
-  static async getRiskMapData(locationId: string, metric: string, year: number) {
+  static async getRiskMapData(
+    locationId: string,
+    metric: string,
+    year: number,
+    scenario: string = 'default'
+  ): Promise<{ metric: string; year: number; features: any[] }> {
     const normalizedMetric = metric.toLowerCase();
     
     // Resolve metric database string
@@ -377,10 +389,11 @@ export class RiskService {
             type: 'Feature',
             geometry: geojsonGeometry,
             properties: {
-              riskScore: row.score !== null ? Number(row.score) : null,
+              riskScore: (row.score !== null && !isNaN(Number(row.score))) ? Number(row.score) : null,
               riskLevel: row.level,
               source: row.source,
               metadata: row.metadata,
+              unit: 'score (0-1)',
             }
           };
         });
@@ -396,11 +409,12 @@ export class RiskService {
         if (loc) {
           const lat = Number(loc.latitude);
           const lng = Number(loc.longitude);
-          const riskCalc = await this.getRisk(locationId, normalizedMetric, year).catch(() => ({
+          const riskCalc = await this.getRisk(locationId, normalizedMetric, year, scenario).catch(() => ({
             score: 0.5,
             level: 'MEDIUM' as const,
             source: { provider: 'GeoTwin 360 Risk Model' },
             dataType: 'PROJECTED' as const,
+            unit: 'score (0-1)',
           }));
 
           const radius = 0.04;
@@ -427,6 +441,8 @@ export class RiskService {
                 dataType: riskCalc.dataType,
                 metric: normalizedMetric,
                 year,
+                scenario,
+                unit: 'score (0-1)',
               },
             },
           });

@@ -14,7 +14,7 @@ node_modules/
 # Build output
 dist/
 dist-server/
-reports/
+/reports/
 
 
 # Local agent / IDE configuration
