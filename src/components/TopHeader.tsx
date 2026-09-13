@@ -198,12 +198,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
   };
 
   return (
-    <header className="h-20 bg-near-black border-b border-border-gray flex items-center justify-between px-6 z-40">
-      <div className="flex items-center space-x-4 flex-1 max-w-lg relative" ref={containerRef}>
+    <header className="h-20 bg-[#07110f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 z-40 sticky top-0">
+      <div className="flex items-center space-x-4 flex-1 max-w-xl relative" ref={containerRef}>
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="p-2 text-text-silver hover:text-text-base hover:bg-mid-dark rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-spotify-green flex-shrink-0"
+          className="p-2.5 text-[#8ea39a] hover:text-[#f5fff8] hover:bg-white/[0.05] rounded-xl transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#32f26b] flex-shrink-0"
           aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           id="toggle-sidebar-btn"
@@ -221,11 +221,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
               <button
                 type="button"
                 onClick={() => executeSearch(query)}
-                className="cursor-pointer text-text-silver hover:text-spotify-green transition-colors focus:outline-none"
+                className="cursor-pointer text-[#8ea39a] hover:text-[#32f26b] transition-colors focus:outline-none"
                 title="Click to search"
               >
                 {searchLoading ? (
-                  <Loader2 size={16} className="animate-spin text-spotify-green" />
+                  <Loader2 size={16} className="animate-spin text-[#32f26b]" />
                 ) : (
                   <Search size={16} />
                 )}
@@ -243,36 +243,36 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
           {query && (
             <button
               onClick={handleClear}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-text-silver hover:text-text-base focus:outline-none cursor-pointer"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8ea39a] hover:text-[#f5fff8] p-1 rounded-md hover:bg-white/[0.05] focus:outline-none cursor-pointer transition-colors"
               aria-label="Clear search input"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
 
           {/* Results Dropdown Menu */}
           {isOpen && (searchLoading || searchError || results.length > 0 || (!searchLoading && isTypingRef.current && query.trim().length >= 2)) && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-mid-dark border border-border-gray rounded-lg shadow-heavy z-50 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1b18]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-heavy z-50 max-h-72 overflow-y-auto divide-y divide-white/[0.04]">
               {searchLoading && (
-                <div className="p-4 text-xs text-text-silver text-center flex items-center justify-center space-x-2">
-                  <Loader2 size={12} className="animate-spin text-spotify-green" />
-                  <span>Searching locations...</span>
+                <div className="p-4 text-xs text-[#8ea39a] text-center flex items-center justify-center space-x-2">
+                  <Loader2 size={14} className="animate-spin text-[#32f26b]" />
+                  <span>Searching global climate locations...</span>
                 </div>
               )}
               {searchError && (
-                <div className="p-4 text-xs text-text-negative text-center flex flex-col items-center gap-2">
+                <div className="p-4 text-xs text-[#f87171] text-center flex flex-col items-center gap-2">
                   <span>{searchError}</span>
                   <button
                     type="button"
                     onClick={() => executeSearch(query)}
-                    className="text-xs text-spotify-green hover:underline cursor-pointer font-bold"
+                    className="text-xs text-[#32f26b] hover:underline cursor-pointer font-semibold"
                   >
                     Retry Search
                   </button>
                 </div>
               )}
               {!searchLoading && !searchError && results.length === 0 && (
-                <div className="p-4 text-xs text-text-silver text-center">
+                <div className="p-4 text-xs text-[#8ea39a] text-center">
                   No matching location found
                 </div>
               )}
@@ -286,22 +286,24 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
                       aria-selected={activeIndex === idx}
                       onClick={() => handleSelect(result)}
                       onMouseEnter={() => setActiveIndex(idx)}
-                      className={`px-4 py-2.5 cursor-pointer transition-colors duration-150 flex items-center space-x-3 ${
-                        activeIndex === idx ? 'bg-dark-card text-text-base' : 'text-text-silver'
+                      className={`px-4 py-3 cursor-pointer transition-colors duration-150 flex items-center space-x-3 ${
+                        activeIndex === idx ? 'bg-[#10221e] text-[#f5fff8]' : 'text-[#8ea39a] hover:bg-white/[0.03]'
                       }`}
                     >
-                      <MapPin size={16} className="text-spotify-green flex-shrink-0" />
+                      <div className="p-1.5 rounded-lg bg-white/[0.03] text-[#32f26b] flex-shrink-0">
+                        <MapPin size={15} />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="block text-sm font-bold truncate text-text-base">
+                          <span className="block text-sm font-semibold truncate text-[#f5fff8]">
                             {result.name}
                           </span>
-                          <span className="text-[10px] text-text-silver/60 font-mono flex-shrink-0">
+                          <span className="text-[10px] text-[#19d9c5]/80 font-mono flex-shrink-0 px-1.5 py-0.5 rounded bg-white/[0.03]">
                             {result.latitude.toFixed(4)}°, {result.longitude.toFixed(4)}°
                           </span>
                         </div>
                         {(result.region || result.country) && (
-                          <span className="block text-[11px] text-text-silver truncate mt-0.5">
+                          <span className="block text-[11px] text-[#8ea39a] truncate mt-0.5">
                             {[result.region, result.country].filter(Boolean).join(', ')}
                           </span>
                         )}
@@ -315,10 +317,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
         </div>
       </div>
 
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-5">
         {selectedLocation ? (
           <div 
-            className="hidden lg:flex items-center space-x-2 bg-mid-dark px-4 py-2 rounded-full border border-transparent select-none transition-colors"
+            className="hidden lg:flex items-center space-x-2.5 bg-[#0d1b18] px-3.5 py-1.5 rounded-full border border-white/[0.08] select-none transition-colors shadow-subtle"
             title={
               weatherStatus === 'LOADING'
                 ? 'Fetching weather data...'
@@ -329,35 +331,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
           >
             {weatherStatus === 'LOADING' ? (
               <>
-                <Loader2 size={14} className="text-text-silver animate-spin" />
-                <span className="text-xs text-text-silver font-bold uppercase tracking-wider">
-                  WEATHER LOADING
+                <Loader2 size={13} className="text-[#8ea39a] animate-spin" />
+                <span className="text-[10px] text-[#8ea39a] font-bold uppercase tracking-wider">
+                  STREAMING TELEMETRY
                 </span>
               </>
             ) : weatherStatus === 'AVAILABLE' ? (
               <>
-                <div className="w-2 h-2 rounded-full bg-spotify-green animate-pulse" />
-                <span className="text-xs text-spotify-green font-bold uppercase tracking-wider">
-                  WEATHER AVAILABLE
+                <div className="w-2 h-2 rounded-full bg-[#32f26b] shadow-[0_0_8px_rgba(50,242,107,0.8)] animate-pulse" />
+                <span className="text-[10px] text-[#32f26b] font-bold uppercase tracking-wider">
+                  LIVE TELEMETRY
                 </span>
               </>
             ) : (
               <>
-                <div className="w-2 h-2 rounded-full bg-text-silver/50" />
-                <span className="text-xs text-text-silver font-bold uppercase tracking-wider">
-                  WEATHER UNAVAILABLE
+                <div className="w-2 h-2 rounded-full bg-[#8ea39a]/40" />
+                <span className="text-[10px] text-[#8ea39a] font-bold uppercase tracking-wider">
+                  TELEMETRY STANDBY
                 </span>
               </>
             )}
           </div>
         ) : (
           <div 
-            className="hidden lg:flex items-center space-x-2 bg-mid-dark px-4 py-2 rounded-full border border-transparent select-none"
+            className="hidden lg:flex items-center space-x-2 bg-[#0d1b18] px-3.5 py-1.5 rounded-full border border-white/[0.07] select-none"
             title="Search a location to activate live climate and weather data"
           >
-            <div className="w-2 h-2 rounded-full bg-text-silver/40" />
-            <span className="text-xs text-text-silver/70 font-bold uppercase tracking-wider">
-              STANDBY
+            <div className="w-2 h-2 rounded-full bg-[#8ea39a]/40" />
+            <span className="text-[10px] text-[#8ea39a] font-bold uppercase tracking-wider">
+              READY
             </span>
           </div>
         )}
@@ -366,35 +368,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
         <div className="relative" ref={notificationsRef}>
           <button
             onClick={() => setIsNotificationsOpen((prev) => !prev)}
-            className="relative p-2 text-text-silver hover:text-text-base focus:outline-none cursor-pointer transition-colors"
+            className="relative p-2.5 text-[#8ea39a] hover:text-[#f5fff8] hover:bg-white/[0.04] rounded-xl focus:outline-none cursor-pointer transition-colors"
             aria-label="View notifications and system telemetry"
             title="System notifications & telemetry"
           >
-            <Bell size={20} />
+            <Bell size={19} />
             {!notificationsDismissed && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-spotify-green animate-pulse" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#32f26b] shadow-[0_0_6px_rgba(50,242,107,0.8)] animate-pulse" />
             )}
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-mid-dark border border-border-gray rounded-xl shadow-2xl z-50 p-4 font-sans text-xs space-y-3 animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-border-gray/40 pb-2.5">
+            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#0d1b18]/95 backdrop-blur-2xl border border-white/[0.09] rounded-2xl shadow-heavy z-50 p-4.5 font-sans text-xs space-y-3.5 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-white/[0.07] pb-3">
                 <div className="flex items-center space-x-2">
-                  <Activity size={15} className="text-spotify-green" />
-                  <span className="font-bold text-text-base text-sm">System Telemetry & Alerts</span>
+                  <Activity size={16} className="text-[#32f26b]" />
+                  <span className="font-bold text-[#f5fff8] text-sm">System Telemetry & Health</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   {!notificationsDismissed && (
                     <button
                       onClick={() => setNotificationsDismissed(true)}
-                      className="text-[10px] text-spotify-green hover:underline cursor-pointer"
+                      className="text-[10px] text-[#32f26b] hover:underline cursor-pointer font-medium"
                     >
                       Clear alerts
                     </button>
                   )}
                   <button
                     onClick={() => setIsNotificationsOpen(false)}
-                    className="text-text-silver hover:text-white cursor-pointer p-0.5"
+                    className="text-[#8ea39a] hover:text-white cursor-pointer p-0.5"
                     aria-label="Close notifications panel"
                   >
                     <X size={14} />
@@ -404,47 +406,47 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
 
               {/* Telemetry Status Strip */}
               <div className="space-y-2">
-                <div className="p-2.5 rounded-lg bg-dark-surface border border-border-gray/30 flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Radio size={14} className="text-spotify-green" />
-                    <span className="text-text-silver">Live Weather Engine</span>
+                <div className="p-2.5 rounded-xl bg-[#091614] border border-white/[0.06] flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <Radio size={14} className="text-[#32f26b]" />
+                    <span className="text-[#c7d4cf]">OpenWeather Engine</span>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                    weatherStatus === 'AVAILABLE' ? 'bg-spotify-green/20 text-spotify-green' :
-                    weatherStatus === 'LOADING' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-400'
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                    weatherStatus === 'AVAILABLE' ? 'bg-[#32f26b]/15 text-[#32f26b] border border-[#32f26b]/30' :
+                    weatherStatus === 'LOADING' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-red-500/15 text-red-400 border border-red-500/30'
                   }`}>
-                    {weatherStatus === 'AVAILABLE' ? 'ONLINE' : weatherStatus === 'LOADING' ? 'CONNECTING' : 'OFFLINE'}
+                    {weatherStatus === 'AVAILABLE' ? 'ONLINE' : weatherStatus === 'LOADING' ? 'SYNCING' : 'OFFLINE'}
                   </span>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-dark-surface border border-border-gray/30 flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 size={14} className="text-spotify-green" />
-                    <span className="text-text-silver">NASA POWER Climate Data</span>
+                <div className="p-2.5 rounded-xl bg-[#091614] border border-white/[0.06] flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <CheckCircle2 size={14} className="text-[#32f26b]" />
+                    <span className="text-[#c7d4cf]">NASA POWER Climate Data</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-spotify-green/20 text-spotify-green">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#32f26b]/15 text-[#32f26b] border border-[#32f26b]/30">
                     OPERATIONAL
                   </span>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-dark-surface border border-border-gray/30 flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 size={14} className="text-spotify-green" />
-                    <span className="text-text-silver">Gemini Intelligence Layer</span>
+                <div className="p-2.5 rounded-xl bg-[#091614] border border-white/[0.06] flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <CheckCircle2 size={14} className="text-[#32f26b]" />
+                    <span className="text-[#c7d4cf]">Gemini Reasoning Layer</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-spotify-green/20 text-spotify-green">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#32f26b]/15 text-[#32f26b] border border-[#32f26b]/30">
                     STANDBY / DETERMINISTIC
                   </span>
                 </div>
               </div>
 
               {/* Location Regional Advisory Notice */}
-              <div className="p-3 bg-dark-card rounded-lg border border-border-gray/30 space-y-1">
-                <div className="flex items-center space-x-1.5 text-[11px] font-bold text-text-base">
-                  <Info size={13} className="text-spotify-green" />
+              <div className="p-3 bg-[#091614] rounded-xl border border-white/[0.06] space-y-1">
+                <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-[#f5fff8]">
+                  <Info size={13} className="text-[#32f26b]" />
                   <span>Regional Advisory</span>
                 </div>
-                <p className="text-[11px] text-text-silver leading-relaxed">
+                <p className="text-[11px] text-[#8ea39a] leading-relaxed">
                   {selectedLocation
                     ? `Monitoring active environmental parameters for ${selectedLocation.displayName || selectedLocation.name}. Real-time indicators are operating normally.`
                     : 'No location actively monitored. Search a city above to stream live environmental telemetry.'}
@@ -454,18 +456,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
           )}
         </div>
 
-
         {authUser ? (
-          <div className="flex items-center space-x-3 pl-4 border-l border-border-gray">
+          <div className="flex items-center space-x-3 pl-4 border-l border-white/[0.08]">
             <div className="hidden md:block text-right">
-              <h4 className="text-xs font-bold text-text-base">
+              <h4 className="text-xs font-semibold text-[#f5fff8]">
                 {profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'}
               </h4>
-              <p className="text-[10px] text-text-silver">
+              <p className="text-[10px] text-[#8ea39a]">
                 {authUser.email || 'Sustainability Lead'}
               </p>
             </div>
-            <div className="h-9 w-9 bg-mid-dark rounded-full flex items-center justify-center text-text-silver border border-border-gray overflow-hidden">
+            <div className="h-9 w-9 bg-[#0d1b18] rounded-full flex items-center justify-center text-[#8ea39a] border border-white/[0.08] overflow-hidden">
               {profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture ? (
                 <img
                   src={profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture}
@@ -486,19 +487,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
                 }
               }}
               title="Sign Out"
-              className="p-1.5 text-text-silver hover:text-red-400 transition-colors duration-150 cursor-pointer"
+              className="p-1.5 text-[#8ea39a] hover:text-red-400 transition-colors duration-150 cursor-pointer rounded-lg hover:bg-white/[0.04]"
             >
               <LogOut size={16} />
             </button>
           </div>
         ) : (
-          <div className="flex items-center space-x-3 pl-4 border-l border-border-gray font-sans text-xs">
+          <div className="flex items-center space-x-2.5 pl-4 border-l border-white/[0.08] font-sans text-xs">
             <button
               onClick={() => {
                 setAuthModalMode('signin');
                 setIsAuthModalOpen(true);
               }}
-              className="text-gray-300 hover:text-white transition-colors duration-150 font-medium cursor-pointer"
+              className="text-[#c7d4cf] hover:text-white transition-colors duration-150 font-medium cursor-pointer px-3 py-1.5 rounded-lg hover:bg-white/[0.04]"
             >
               Sign In
             </button>
@@ -507,7 +508,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
                 setAuthModalMode('signup');
                 setIsAuthModalOpen(true);
               }}
-              className="bg-spotify-green hover:bg-spotify-green/90 text-black px-4 py-1.5 rounded-md font-semibold transition-colors duration-150 cursor-pointer"
+              className="bg-[#32f26b] hover:bg-[#32f26b]/90 text-[#07110f] px-4 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer shadow-[0_0_12px_rgba(50,242,107,0.22)] hover:shadow-[0_0_18px_rgba(50,242,107,0.35)]"
             >
               Sign Up
             </button>

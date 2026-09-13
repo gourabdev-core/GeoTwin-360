@@ -30,32 +30,36 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
     stringVal.toLowerCase().includes('no data');
 
   const isUnavailable = Boolean(error) || isValueUnavailable;
-  const fontSizeClass = typeof value === 'string' && value.length > 7 ? 'text-sm' : 'text-xl';
+  const fontSizeClass = typeof value === 'string' && value.length > 7 ? 'text-sm' : 'text-2xl';
 
   return (
-    <div className="bg-mid-dark p-3.5 rounded-lg flex flex-col justify-between min-h-[110px] hover:bg-dark-card transition-colors duration-200 overflow-hidden">
-      <span className="text-[10px] text-text-silver font-bold uppercase tracking-wider select-none truncate">
+    <div className="bg-[#0d1b18] p-4 rounded-xl flex flex-col justify-between min-h-[118px] border border-white/[0.07] hover:border-[#32f26b]/30 hover:bg-[#10221e] hover:-translate-y-0.5 hover:shadow-medium transition-all duration-200 overflow-hidden relative group">
+      {/* Subtle hover corner luminescence */}
+      <div className="absolute top-0 right-0 w-16 h-16 bg-[#32f26b]/5 rounded-full blur-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      <span className="text-[10px] text-[#8ea39a] font-bold uppercase tracking-wider select-none truncate block">
         {name}
       </span>
-      <div className="space-y-1">
+
+      <div className="my-1">
         {loading ? (
           <div className="space-y-1.5">
-            <Skeleton variant="text" className="h-5 w-20 bg-dark-surface" />
-            <Skeleton variant="text" className="h-3 w-12 bg-dark-surface" />
+            <Skeleton variant="text" className="h-6 w-24 bg-[#091614]" />
+            <Skeleton variant="text" className="h-3 w-14 bg-[#091614]" />
           </div>
         ) : isUnavailable ? (
           <div className="flex items-center">
-            <span className="text-xs font-medium text-text-silver bg-dark-surface px-2.5 py-1 rounded border border-light-border/10 font-sans">
+            <span className="text-xs font-medium text-[#8ea39a] bg-white/[0.03] px-2.5 py-1 rounded-md border border-white/[0.06] font-sans">
               Unavailable
             </span>
           </div>
         ) : (
-          <div className="flex items-baseline space-x-1 truncate">
-            <span className={`${fontSizeClass} font-title font-bold text-text-base truncate`}>
+          <div className="flex items-baseline space-x-1.5 truncate">
+            <span className={`${fontSizeClass} font-title font-bold text-[#f5fff8] tracking-tight truncate`}>
               {value}
             </span>
             {unit && (
-              <span className="text-xs text-text-silver font-sans shrink-0">
+              <span className="text-xs text-[#8ea39a] font-sans font-medium shrink-0">
                 {unit}
               </span>
             )}
@@ -64,9 +68,9 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
       </div>
 
       {!loading && !isUnavailable && (dateOrYear || sourceOrStatus) && (
-        <div className="flex items-center justify-between text-[9px] text-text-silver/80 pt-1 border-t border-light-border/10 font-mono select-none">
+        <div className="flex items-center justify-between text-[9px] text-[#8ea39a]/80 pt-2 border-t border-white/[0.06] font-mono select-none">
           <span className="truncate">{dateOrYear}</span>
-          <span className="truncate text-right">{sourceOrStatus}</span>
+          <span className="truncate text-right font-medium text-[#c7d4cf]/80">{sourceOrStatus}</span>
         </div>
       )}
     </div>

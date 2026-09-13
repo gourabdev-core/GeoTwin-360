@@ -65,23 +65,39 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-near-black text-text-base overflow-hidden">
+    <div className="flex h-screen bg-atmospheric text-[#f5fff8] overflow-hidden relative">
+      {/* Subtle Static Environmental Glows */}
+      <div
+        className="fixed top-0 right-1/4 w-[600px] h-[350px] rounded-full pointer-events-none -z-10 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(50, 242, 107, 0.035) 0%, transparent 70%)',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="fixed bottom-0 left-1/3 w-[700px] h-[400px] rounded-full pointer-events-none -z-10 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(25, 217, 197, 0.025) 0%, transparent 70%)',
+        }}
+        aria-hidden="true"
+      />
+
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Offline Banner */}
         {!isOnline && (
-          <div className="bg-amber-950/80 border-b border-amber-600/30 px-6 py-2 text-xs text-amber-200 flex items-center justify-between z-50">
-            <div className="flex items-center space-x-2">
-              <WifiOff size={14} className="text-amber-400 shrink-0" />
+          <div className="bg-[#1a1407]/90 backdrop-blur-md border-b border-[#ffa42b]/30 px-6 py-2.5 text-xs text-[#fed7aa] flex items-center justify-between z-50">
+            <div className="flex items-center space-x-2.5">
+              <WifiOff size={14} className="text-[#ffa42b] shrink-0" />
               <span>
-                <strong>Offline Mode Active:</strong> Network connection interrupted. Viewing cached climate observations and models.
+                <strong className="text-white">Offline Mode Active:</strong> Network connection interrupted. Viewing cached climate observations and digital-twin models.
               </span>
             </div>
             <button
               onClick={handleCheckConnection}
               disabled={checkingConnection}
-              className="flex items-center space-x-1 underline hover:text-white transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50"
+              className="flex items-center space-x-1.5 underline hover:text-white transition-colors cursor-pointer text-xs font-semibold disabled:opacity-50"
               aria-label="Check internet connection"
             >
               <RefreshCw size={12} className={checkingConnection ? 'animate-spin' : ''} />
@@ -92,8 +108,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <TopHeader onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>
         </main>
@@ -102,4 +118,3 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 export default Layout;
-

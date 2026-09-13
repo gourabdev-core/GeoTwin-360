@@ -397,25 +397,29 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Location Context Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 bg-dark-surface rounded-lg shadow-medium gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-mid-dark rounded-full text-spotify-green">
-            <MapPin size={24} />
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between p-5 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-2.5 bg-[#0d1b18] border border-white/[0.08] rounded-xl text-[#32f26b] shadow-subtle flex-shrink-0">
+            <MapPin size={22} />
           </div>
           {selectedLocation ? (
             <div>
-              <h2 className="text-lg font-title font-bold text-text-base">
+              <h2 className="text-xl font-title font-bold text-[#f5fff8] tracking-tight">
                 {selectedLocation.displayName || formatLocationName(selectedLocation)}
               </h2>
-              <p className="text-xs text-text-silver font-sans">
-                {selectedLocation?.latitude !== undefined && selectedLocation?.latitude !== null ? Math.abs(selectedLocation.latitude).toFixed(4) : '0.0000'}° {selectedLocation?.latitude !== undefined && selectedLocation?.latitude >= 0 ? 'N' : 'S'},{' '}
-                {selectedLocation?.longitude !== undefined && selectedLocation?.longitude !== null ? Math.abs(selectedLocation.longitude).toFixed(4) : '0.0000'}° {selectedLocation?.longitude !== undefined && selectedLocation?.longitude >= 0 ? 'E' : 'W'}
+              <p className="text-xs text-[#8ea39a] font-sans mt-0.5 flex items-center gap-1.5">
+                <span className="font-mono text-[11px] text-[#19d9c5]/90 bg-white/[0.04] px-1.5 py-0.5 rounded">
+                  {selectedLocation?.latitude !== undefined && selectedLocation?.latitude !== null ? Math.abs(selectedLocation.latitude).toFixed(4) : '0.0000'}° {selectedLocation?.latitude !== undefined && selectedLocation?.latitude >= 0 ? 'N' : 'S'},{' '}
+                  {selectedLocation?.longitude !== undefined && selectedLocation?.longitude !== null ? Math.abs(selectedLocation.longitude).toFixed(4) : '0.0000'}° {selectedLocation?.longitude !== undefined && selectedLocation?.longitude >= 0 ? 'E' : 'W'}
+                </span>
+                <span className="text-[#8ea39a]/60">•</span>
+                <span>Real-Time Environmental Twin</span>
               </p>
             </div>
           ) : (
             <div>
-              <h2 className="text-lg font-title font-bold text-text-base">No location selected</h2>
-              <p className="text-xs text-text-silver font-sans">Search for a location to begin.</p>
+              <h2 className="text-lg font-title font-bold text-[#f5fff8]">No location selected</h2>
+              <p className="text-xs text-[#8ea39a] font-sans">Search for any global city or region to begin telemetry.</p>
             </div>
           )}
         </div>
@@ -426,7 +430,7 @@ export const DashboardPage: React.FC = () => {
             value={selectedScenario}
             onChange={(e) => setSelectedScenario(e.target.value)}
             disabled={!selectedLocation}
-            className="bg-mid-dark text-text-base text-sm px-4 py-2.5 rounded-full outline-none border border-transparent focus:border-light-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-sans font-bold uppercase tracking-wider"
+            className="bg-[#0d1b18] text-[#f5fff8] text-xs font-semibold px-4 py-2.5 rounded-xl outline-none border border-white/[0.08] focus:border-[#32f26b]/50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed font-sans transition-all shadow-subtle"
           >
             <option value="default">Baseline Scenario</option>
             <option value="resilience">Resilience Plan 2035</option>
@@ -434,16 +438,16 @@ export const DashboardPage: React.FC = () => {
           </select>
 
           {/* Year Selector */}
-          <div className="flex bg-mid-dark p-1 rounded-full">
+          <div className="flex bg-[#0d1b18] p-1 rounded-xl border border-white/[0.08] shadow-subtle">
             {years.map((year) => (
               <button
                 key={year}
                 onClick={() => setSelectedYear(year)}
                 disabled={!selectedLocation}
-                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-200 ${
+                className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all duration-200 ${
                   selectedYear === year && selectedLocation
-                    ? 'bg-spotify-green text-black'
-                    : 'text-text-silver hover:text-text-base disabled:opacity-50'
+                    ? 'bg-[#32f26b] text-[#07110f] shadow-[0_0_12px_rgba(50,242,107,0.25)]'
+                    : 'text-[#8ea39a] hover:text-[#f5fff8] disabled:opacity-40'
                 }`}
               >
                 {year}
@@ -454,20 +458,23 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {locationLoading ? (
-        <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-dark-surface rounded-lg shadow-medium">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-spotify-green"></div>
-          <span className="text-sm text-text-silver font-sans">Syncing location context...</span>
+        <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium">
+          <div className="relative">
+            <Loader2 className="h-8 w-8 animate-spin text-[#32f26b]" />
+            <span className="absolute inset-0 rounded-full blur-md bg-[#32f26b]/20 -z-10" />
+          </div>
+          <span className="text-sm text-[#8ea39a] font-sans">Syncing location context...</span>
         </div>
       ) : !selectedLocation ? (
-        <div className="flex flex-col items-center justify-center text-center p-10 bg-dark-surface rounded-lg min-h-[420px] border border-border-gray/50 shadow-medium space-y-6">
-          <div className="p-4 bg-mid-dark rounded-full text-spotify-green">
+        <div className="flex flex-col items-center justify-center text-center p-10 bg-[#091614] rounded-2xl min-h-[420px] border border-white/[0.08] shadow-heavy space-y-6">
+          <div className="p-4 bg-[#0d1b18] border border-white/[0.08] rounded-2xl text-[#32f26b] shadow-[0_0_24px_rgba(50,242,107,0.15)]">
             <Compass size={44} />
           </div>
           <div className="max-w-md space-y-2">
-            <h3 className="text-xl font-title font-bold text-text-base">
+            <h3 className="text-2xl font-title font-bold text-[#f5fff8] tracking-tight">
               Search a location to explore its digital twin
             </h3>
-            <p className="text-sm text-text-silver leading-relaxed">
+            <p className="text-sm text-[#8ea39a] leading-relaxed">
               Search for any city worldwide to load real-time weather, risk intelligence, climate timeline projections, and run interactive scenario simulations.
             </p>
           </div>
@@ -506,32 +513,33 @@ export const DashboardPage: React.FC = () => {
                 setInlineError(null);
               }}
               placeholder="e.g. Kolkata, Mumbai, London, Tokyo..."
-              className="flex-1 bg-mid-dark text-text-base px-4 py-3 rounded-lg border border-border-gray focus:border-spotify-green outline-none text-sm font-sans"
+              className="flex-1 bg-[#0d1b18] text-[#f5fff8] px-4 py-3 rounded-xl border border-white/[0.08] focus:border-[#32f26b]/50 focus:shadow-[0_0_16px_rgba(50,242,107,0.15)] outline-none text-sm font-sans transition-all"
             />
             <Button
               type="submit"
+              variant="primary"
               disabled={inlineLoading || inlineQuery.trim().length < 2}
-              className="bg-spotify-green text-black font-bold px-5 hover:bg-spotify-green/90 shrink-0 cursor-pointer"
+              className="shrink-0"
             >
-              {inlineLoading ? <Loader2 size={18} className="animate-spin" /> : 'Search'}
+              {inlineLoading ? <Loader2 size={16} className="animate-spin" /> : 'Search'}
             </Button>
           </form>
 
           {inlineError && (
-            <p className="text-xs text-text-negative">{inlineError}</p>
+            <p className="text-xs text-[#f87171]">{inlineError}</p>
           )}
 
           {inlineResults.length > 0 && (
-            <div className="w-full max-w-md bg-mid-dark border border-border-gray rounded-lg text-left overflow-hidden divide-y divide-border-gray/50">
+            <div className="w-full max-w-md bg-[#0d1b18] border border-white/[0.08] rounded-xl text-left overflow-hidden divide-y divide-white/[0.04] shadow-heavy">
               {inlineResults.map((res, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => selectLocation(res)}
-                  className="w-full px-4 py-2.5 text-left hover:bg-dark-card transition-colors flex items-center justify-between text-xs cursor-pointer"
+                  className="w-full px-4 py-3 text-left hover:bg-[#10221e] transition-colors flex items-center justify-between text-xs cursor-pointer"
                 >
-                  <span className="font-bold text-text-base">{res.displayName || res.name}</span>
-                  <span className="text-text-silver font-mono">{res.latitude.toFixed(2)}°, {res.longitude.toFixed(2)}°</span>
+                  <span className="font-semibold text-[#f5fff8]">{res.displayName || res.name}</span>
+                  <span className="text-[#19d9c5]/80 font-mono">{res.latitude.toFixed(2)}°, {res.longitude.toFixed(2)}°</span>
                 </button>
               ))}
             </div>
@@ -539,7 +547,7 @@ export const DashboardPage: React.FC = () => {
 
           {/* Quick Select Location Chips */}
           <div className="pt-2">
-            <span className="block text-[11px] text-text-silver uppercase tracking-wider font-bold mb-3">
+            <span className="block text-[11px] text-[#8ea39a] uppercase tracking-wider font-semibold mb-3">
               Or explore popular regions:
             </span>
             <div className="flex flex-wrap items-center justify-center gap-2">
@@ -565,9 +573,9 @@ export const DashboardPage: React.FC = () => {
                       displayName: `${ql.name}, ${ql.region}, ${ql.country}`,
                     })
                   }
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-mid-dark border border-border-gray/80 text-text-silver hover:text-text-base hover:border-spotify-green/60 hover:bg-dark-card transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-medium bg-[#0d1b18] border border-white/[0.08] text-[#8ea39a] hover:text-[#f5fff8] hover:border-[#32f26b]/40 hover:bg-[#10221e] hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5 shadow-subtle"
                 >
-                  <MapPin size={12} className="text-spotify-green" />
+                  <MapPin size={12} className="text-[#32f26b]" />
                   <span>{ql.name}</span>
                 </button>
               ))}
@@ -652,28 +660,28 @@ export const DashboardPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Sustainability Score */}
             <Card className="flex flex-col min-h-[200px] justify-between">
-              <h3 className="text-base font-title font-bold text-text-base mb-2">Sustainability Score</h3>
-              <div className="flex-grow flex flex-col justify-center items-center">
+              <h3 className="text-base font-title font-bold text-[#f5fff8] mb-2">Sustainability Index</h3>
+              <div className="flex-grow flex flex-col justify-center items-center py-2">
                 {simulationResult ? (
-                  <div className="w-full space-y-3">
+                  <div className="w-full space-y-3.5">
                     <div className="flex items-center justify-around">
                       <div className="text-center">
-                        <span className="text-xs text-text-silver block font-sans font-bold uppercase tracking-wider mb-1">Before</span>
-                        <span className="text-2xl font-bold text-text-silver">{simulationResult.sustainabilityScore.before}</span>
-                        <span className="text-xs text-text-silver/50 font-bold block">/100</span>
+                        <span className="text-[10px] text-[#8ea39a] block font-sans font-bold uppercase tracking-wider mb-1">Baseline</span>
+                        <span className="text-2xl font-bold text-[#8ea39a]">{simulationResult.sustainabilityScore.before}</span>
+                        <span className="text-[10px] text-[#8ea39a]/50 font-bold block">/100</span>
                       </div>
-                      <span className="text-xl text-text-silver">→</span>
+                      <span className="text-xl text-[#8ea39a]/40">→</span>
                       <div className="text-center">
-                        <span className="text-xs text-spotify-green block font-sans font-bold uppercase tracking-wider mb-1">After</span>
-                        <span className="text-3xl font-bold text-text-base">{simulationResult.sustainabilityScore.after}</span>
-                        <span className="text-xs text-text-silver/50 font-bold block">/100</span>
+                        <span className="text-[10px] text-[#32f26b] block font-sans font-bold uppercase tracking-wider mb-1">Resilient</span>
+                        <span className="text-3xl font-bold text-[#f5fff8] font-title">{simulationResult.sustainabilityScore.after}</span>
+                        <span className="text-[10px] text-[#32f26b]/60 font-bold block">/100</span>
                       </div>
                     </div>
-                    <div className="text-center pt-2">
-                      <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
+                    <div className="text-center pt-1">
+                      <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full border ${
                         simulationResult.sustainabilityScore.improvement >= 0
-                          ? 'bg-[#1ed760]/20 text-[#1ed760]'
-                          : 'bg-red-500/20 text-red-500'
+                          ? 'bg-[#32f26b]/15 text-[#32f26b] border-[#32f26b]/30 shadow-[0_0_10px_rgba(50,242,107,0.15)]'
+                          : 'bg-red-500/15 text-red-400 border-red-500/30'
                       }`}>
                         {simulationResult.sustainabilityScore.improvement >= 0 ? '+' : ''}
                         {simulationResult.sustainabilityScore.improvement} Resilience Score Change
@@ -681,22 +689,22 @@ export const DashboardPage: React.FC = () => {
                     </div>
                   </div>
                 ) : baselineSustainabilityScore !== null ? (
-                  <div className="text-center space-y-1">
-                    <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-3xl font-bold text-text-base">{baselineSustainabilityScore}</span>
-                      <span className="text-xs text-text-silver/70 font-bold">/100</span>
+                  <div className="text-center space-y-1.5">
+                    <div className="flex items-baseline justify-center gap-1.5">
+                      <span className="text-4xl font-bold text-[#f5fff8] font-title">{baselineSustainabilityScore}</span>
+                      <span className="text-xs text-[#8ea39a] font-bold">/100</span>
                     </div>
-                    <span className="text-xs text-text-silver block font-sans font-medium">
+                    <span className="text-xs text-[#c7d4cf] block font-sans font-medium">
                       Baseline Sustainability Index
                     </span>
-                    <span className="text-[11px] text-text-silver/60 block mt-1">
+                    <span className="text-[11px] text-[#8ea39a]/70 block">
                       Run scenario simulator below to evaluate intervention impact
                     </span>
                   </div>
                 ) : (
                   <div className="text-center space-y-1">
-                    <span className="text-2xl font-bold text-text-base">--</span>
-                    <span className="text-sm text-text-silver block">Score unavailable</span>
+                    <span className="text-3xl font-bold text-[#f5fff8]">--</span>
+                    <span className="text-xs text-[#8ea39a] block">Score unavailable</span>
                   </div>
                 )}
               </div>
@@ -717,37 +725,39 @@ export const DashboardPage: React.FC = () => {
             <Card className="flex flex-col justify-between min-h-[200px]">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base font-title font-bold text-text-base flex items-center gap-2">
-                    <FileText size={18} className="text-spotify-green" />
+                  <h3 className="text-base font-title font-bold text-[#f5fff8] flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-[#32f26b]/10 text-[#32f26b]">
+                      <FileText size={16} />
+                    </div>
                     <span>Climate Report</span>
                   </h3>
                   <Link
                     to="/reports"
-                    className="text-xs text-spotify-green hover:underline flex items-center gap-1 font-medium"
+                    className="text-xs text-[#32f26b] hover:underline flex items-center gap-1 font-medium"
                   >
                     <span>All Reports</span>
                     <ArrowRight size={12} />
                   </Link>
                 </div>
-                <p className="text-xs text-text-silver leading-relaxed">
+                <p className="text-xs text-[#8ea39a] leading-relaxed">
                   Save this scenario and risk intelligence to your account or export a complete PDF summary.
                 </p>
 
                 {/* Recent Saved Reports list */}
-                <div className="mt-3 pt-3 border-t border-border-gray/50">
-                  <div className="text-[11px] font-bold text-text-silver/70 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <div className="mt-3 pt-3 border-t border-white/[0.07]">
+                  <div className="text-[11px] font-bold text-[#8ea39a] uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <Clock size={11} />
                     <span>Recent Saved Reports</span>
                   </div>
                   {reportsLoading ? (
-                    <div className="flex items-center gap-2 py-2 text-xs text-text-silver">
-                      <Loader2 size={13} className="animate-spin text-spotify-green" />
+                    <div className="flex items-center gap-2 py-2 text-xs text-[#8ea39a]">
+                      <Loader2 size={13} className="animate-spin text-[#32f26b]" />
                       <span>Loading saved reports...</span>
                     </div>
                   ) : reportsError ? (
-                    <p className="text-xs text-red-400 py-1">{reportsError}</p>
+                    <p className="text-xs text-[#f87171] py-1">{reportsError}</p>
                   ) : savedReports.length === 0 ? (
-                    <p className="text-xs text-text-silver/60 italic py-1">No saved reports yet.</p>
+                    <p className="text-xs text-[#8ea39a]/60 italic py-1">No saved reports yet.</p>
                   ) : (
                     <div className="space-y-1.5 max-h-[90px] overflow-y-auto pr-1">
                       {savedReports.slice(0, 2).map((rep) => {
@@ -759,13 +769,13 @@ export const DashboardPage: React.FC = () => {
                         return (
                           <div
                             key={rep.id}
-                            className="flex items-center justify-between p-1.5 rounded bg-mid-dark/60 hover:bg-mid-dark border border-border-gray/40 text-xs"
+                            className="flex items-center justify-between p-2 rounded-xl bg-[#0d1b18] hover:bg-[#10221e] border border-white/[0.06] text-xs transition-colors"
                           >
                             <div className="truncate mr-2">
-                              <span className="font-semibold text-text-base block truncate">
+                              <span className="font-semibold text-[#f5fff8] block truncate">
                                 {rep.title || 'Climate Assessment Report'}
                               </span>
-                              <span className="text-[10px] text-text-silver">
+                              <span className="text-[10px] text-[#8ea39a]">
                                 {locName} {targetYr ? `• ${targetYr}` : ''} {scenName ? `(${scenName})` : ''}
                               </span>
                             </div>
@@ -773,7 +783,7 @@ export const DashboardPage: React.FC = () => {
                               <a
                                 href={rep.file_url}
                                 download={`Report_${locName.replace(/\s+/g, '_')}.pdf`}
-                                className="text-spotify-green hover:text-white p-1 rounded transition-colors flex-shrink-0"
+                                className="text-[#32f26b] hover:text-white p-1 rounded transition-colors flex-shrink-0"
                                 title="Download saved PDF"
                               >
                                 <Download size={13} />
@@ -787,11 +797,11 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
               {reportError && (
-                <p className="text-xs text-red-500 my-2 font-semibold">
+                <p className="text-xs text-[#f87171] my-2 font-semibold">
                   {reportError}
                 </p>
               )}
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              <div className="flex flex-col sm:flex-row gap-2.5 mt-4">
                 <Button
                   variant="primary"
                   size="sm"
