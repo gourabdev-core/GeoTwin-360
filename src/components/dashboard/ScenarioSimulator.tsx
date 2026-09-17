@@ -386,7 +386,7 @@ export const ScenarioSimulator: React.FC<ScenarioSimulatorProps> = ({
             {!error && simulationResult && (
               <div className="flex-grow flex flex-col justify-between">
                 <div className="overflow-x-auto max-h-[260px] overflow-y-auto">
-                  <table className="w-full text-left text-xs font-sans">
+                  <table className="w-full min-w-[380px] text-left text-xs font-sans">
                     <thead>
                       <tr className="border-b border-border-gray/50 text-[10px] uppercase text-text-silver/70 font-bold sticky top-0 bg-mid-dark">
                         <th className="py-2">Indicator</th>

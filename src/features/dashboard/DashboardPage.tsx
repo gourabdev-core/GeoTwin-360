@@ -397,17 +397,17 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Location Context Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between p-5 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium gap-4">
-        <div className="flex items-center space-x-3.5">
+      <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 lg:p-5 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium">
+        <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0">
           <div className="p-2.5 bg-[#0d1b18] border border-white/[0.08] rounded-xl text-[#32f26b] shadow-subtle flex-shrink-0">
             <MapPin size={22} />
           </div>
           {selectedLocation ? (
             <div>
-              <h2 className="text-xl font-title font-bold text-[#f5fff8] tracking-tight">
+              <h2 className="text-base sm:text-lg lg:text-xl font-title font-bold text-[#f5fff8] tracking-tight truncate">
                 {selectedLocation.displayName || formatLocationName(selectedLocation)}
               </h2>
-              <p className="text-xs text-[#8ea39a] font-sans mt-0.5 flex items-center gap-1.5">
+              <p className="text-[10px] sm:text-xs text-[#8ea39a] font-sans mt-0.5 flex items-center gap-1 sm:gap-1.5 flex-wrap">
                 <span className="font-mono text-[11px] text-[#19d9c5]/90 bg-white/[0.04] px-1.5 py-0.5 rounded">
                   {selectedLocation?.latitude !== undefined && selectedLocation?.latitude !== null ? Math.abs(selectedLocation.latitude).toFixed(4) : '0.0000'}° {selectedLocation?.latitude !== undefined && selectedLocation?.latitude >= 0 ? 'N' : 'S'},{' '}
                   {selectedLocation?.longitude !== undefined && selectedLocation?.longitude !== null ? Math.abs(selectedLocation.longitude).toFixed(4) : '0.0000'}° {selectedLocation?.longitude !== undefined && selectedLocation?.longitude >= 0 ? 'E' : 'W'}
@@ -424,7 +424,7 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center space-x-3 self-end md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Scenario Selector */}
           <select
             value={selectedScenario}
@@ -438,13 +438,13 @@ export const DashboardPage: React.FC = () => {
           </select>
 
           {/* Year Selector */}
-          <div className="flex bg-[#0d1b18] p-1 rounded-xl border border-white/[0.08] shadow-subtle">
+          <div className="flex bg-[#0d1b18] p-0.5 sm:p-1 rounded-xl border border-white/[0.08] shadow-subtle overflow-x-auto">
             {years.map((year) => (
               <button
                 key={year}
                 onClick={() => setSelectedYear(year)}
                 disabled={!selectedLocation}
-                className={`text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all duration-200 ${
+                className={`text-[10px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap ${
                   selectedYear === year && selectedLocation
                     ? 'bg-[#32f26b] text-[#07110f] shadow-[0_0_12px_rgba(50,242,107,0.25)]'
                     : 'text-[#8ea39a] hover:text-[#f5fff8] disabled:opacity-40'
@@ -458,7 +458,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {locationLoading ? (
-        <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium">
+        <div className="flex flex-col items-center justify-center p-6 sm:p-12 space-y-4 bg-[#091614] border border-white/[0.08] rounded-2xl shadow-medium">
           <div className="relative">
             <Loader2 className="h-8 w-8 animate-spin text-[#32f26b]" />
             <span className="absolute inset-0 rounded-full blur-md bg-[#32f26b]/20 -z-10" />
@@ -466,12 +466,12 @@ export const DashboardPage: React.FC = () => {
           <span className="text-sm text-[#8ea39a] font-sans">Syncing location context...</span>
         </div>
       ) : !selectedLocation ? (
-        <div className="flex flex-col items-center justify-center text-center p-10 bg-[#091614] rounded-2xl min-h-[420px] border border-white/[0.08] shadow-heavy space-y-6">
+        <div className="flex flex-col items-center justify-center text-center p-6 sm:p-10 bg-[#091614] rounded-2xl min-h-[320px] sm:min-h-[420px] border border-white/[0.08] shadow-heavy space-y-5 sm:space-y-6">
           <div className="p-4 bg-[#0d1b18] border border-white/[0.08] rounded-2xl text-[#32f26b] shadow-[0_0_24px_rgba(50,242,107,0.15)]">
             <Compass size={44} />
           </div>
           <div className="max-w-md space-y-2">
-            <h3 className="text-2xl font-title font-bold text-[#f5fff8] tracking-tight">
+            <h3 className="text-xl sm:text-2xl font-title font-bold text-[#f5fff8] tracking-tight">
               Search a location to explore its digital twin
             </h3>
             <p className="text-sm text-[#8ea39a] leading-relaxed">
@@ -587,7 +587,7 @@ export const DashboardPage: React.FC = () => {
           {/* Primary Dashboard Row */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Climate Risk Map */}
-            <Card className="lg:col-span-3 flex flex-col min-h-[400px]">
+            <Card className="lg:col-span-3 flex flex-col min-h-[300px] sm:min-h-[350px] lg:min-h-[400px]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-title font-bold text-text-base">Climate Risk Map</h3>
                 <span className="text-xs text-text-silver bg-mid-dark px-3 py-1 rounded-full uppercase tracking-wider font-bold">

@@ -234,7 +234,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
   if (error) {
     return (
       <Card className="flex flex-col min-h-[200px]">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
           <h3 className="text-base font-title font-bold text-text-base flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-400" />
             <span>Climate Advisory Status</span>
@@ -303,7 +303,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
     return (
       <Card className="flex flex-col">
         {/* Header with explicit provenance indication */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <h3 className="text-base font-title font-bold text-text-base flex items-center gap-2">
             {isModelBased ? (
               <Cpu size={18} className="text-cyan-400 shrink-0" />
@@ -321,7 +321,7 @@ export const AIAdvisorCard: React.FC<AIAdvisorCardProps> = ({
             </span>
           </h3>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {isModelBased ? (
               <span className="text-[10px] text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold">
                 Type B: Deterministic Rules

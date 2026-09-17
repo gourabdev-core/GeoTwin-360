@@ -198,8 +198,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
   };
 
   return (
-    <header className="h-20 bg-[#07110f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 z-40 sticky top-0">
-      <div className="flex items-center space-x-4 flex-1 max-w-xl relative" ref={containerRef}>
+    <header className="h-14 sm:h-16 lg:h-20 bg-[#07110f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-3 sm:px-4 lg:px-6 z-40 sticky top-0">
+      <div className="flex items-center space-x-2 sm:space-x-4 flex-1 max-w-xl relative min-w-0" ref={containerRef}>
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -317,7 +317,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
         </div>
       </div>
 
-      <div className="flex items-center space-x-5">
+      <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-5 shrink-0">
         {selectedLocation ? (
           <div 
             className="hidden lg:flex items-center space-x-2.5 bg-[#0d1b18] px-3.5 py-1.5 rounded-full border border-white/[0.08] select-none transition-colors shadow-subtle"
@@ -379,7 +379,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#0d1b18]/95 backdrop-blur-2xl border border-white/[0.09] rounded-2xl shadow-heavy z-50 p-4.5 font-sans text-xs space-y-3.5 animate-fadeIn">
+            <div className="absolute right-0 mt-3 w-[calc(100vw-1.5rem)] sm:w-96 max-w-96 bg-[#0d1b18]/95 backdrop-blur-2xl border border-white/[0.09] rounded-2xl shadow-heavy z-50 p-3.5 sm:p-4.5 font-sans text-xs space-y-3.5 animate-fadeIn">
               <div className="flex items-center justify-between border-b border-white/[0.07] pb-3">
                 <div className="flex items-center space-x-2">
                   <Activity size={16} className="text-[#32f26b]" />
@@ -457,7 +457,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
         </div>
 
         {authUser ? (
-          <div className="flex items-center space-x-3 pl-4 border-l border-white/[0.08]">
+          <div className="flex items-center space-x-2 sm:space-x-3 pl-2 sm:pl-4 border-l border-white/[0.08]">
             <div className="hidden md:block text-right">
               <h4 className="text-xs font-semibold text-[#f5fff8]">
                 {profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'}
@@ -493,13 +493,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
             </button>
           </div>
         ) : (
-          <div className="flex items-center space-x-2.5 pl-4 border-l border-white/[0.08] font-sans text-xs">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 pl-2 sm:pl-4 border-l border-white/[0.08] font-sans text-xs">
             <button
               onClick={() => {
                 setAuthModalMode('signin');
                 setIsAuthModalOpen(true);
               }}
-              className="text-[#c7d4cf] hover:text-white transition-colors duration-150 font-medium cursor-pointer px-3 py-1.5 rounded-lg hover:bg-white/[0.04]"
+              className="text-[#c7d4cf] hover:text-white transition-colors duration-150 font-medium cursor-pointer px-2 sm:px-3 py-1.5 rounded-lg hover:bg-white/[0.04]"
             >
               Sign In
             </button>
@@ -508,7 +508,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar, sidebarOp
                 setAuthModalMode('signup');
                 setIsAuthModalOpen(true);
               }}
-              className="bg-[#32f26b] hover:bg-[#32f26b]/90 text-[#07110f] px-4 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer shadow-[0_0_12px_rgba(50,242,107,0.22)] hover:shadow-[0_0_18px_rgba(50,242,107,0.35)]"
+              className="bg-[#32f26b] hover:bg-[#32f26b]/90 text-[#07110f] px-3 sm:px-4 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer shadow-[0_0_12px_rgba(50,242,107,0.22)] hover:shadow-[0_0_18px_rgba(50,242,107,0.35)]"
             >
               Sign Up
             </button>

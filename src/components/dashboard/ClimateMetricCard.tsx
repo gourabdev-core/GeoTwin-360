@@ -33,7 +33,7 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
   const fontSizeClass = typeof value === 'string' && value.length > 7 ? 'text-sm' : 'text-2xl';
 
   return (
-    <div className="bg-[#0d1b18] p-4 rounded-xl flex flex-col justify-between min-h-[118px] border border-white/[0.07] hover:border-[#32f26b]/30 hover:bg-[#10221e] hover:-translate-y-0.5 hover:shadow-medium transition-all duration-200 overflow-hidden relative group">
+    <div className="bg-[#0d1b18] p-3 sm:p-4 rounded-xl flex flex-col justify-between min-h-[100px] sm:min-h-[118px] border border-white/[0.07] hover:border-[#32f26b]/30 hover:bg-[#10221e] hover:-translate-y-0.5 hover:shadow-medium transition-all duration-200 overflow-hidden relative group">
       {/* Subtle hover corner luminescence */}
       <div className="absolute top-0 right-0 w-16 h-16 bg-[#32f26b]/5 rounded-full blur-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -68,7 +68,7 @@ export const ClimateMetricCard: React.FC<ClimateMetricCardProps> = ({
       </div>
 
       {!loading && !isUnavailable && (dateOrYear || sourceOrStatus) && (
-        <div className="flex items-center justify-between text-[9px] text-[#8ea39a]/80 pt-2 border-t border-white/[0.06] font-mono select-none">
+        <div className="flex items-center justify-between text-[9px] text-[#8ea39a]/80 pt-2 border-t border-white/[0.06] font-mono select-none min-w-0 gap-1">
           <span className="truncate">{dateOrYear}</span>
           <span className="truncate text-right font-medium text-[#c7d4cf]/80">{sourceOrStatus}</span>
         </div>

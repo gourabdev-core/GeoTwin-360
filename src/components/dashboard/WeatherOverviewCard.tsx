@@ -66,7 +66,7 @@ export const WeatherOverviewCard: React.FC<WeatherOverviewCardProps> = ({
   return (
     <Card hoverable className="flex flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
           <div className="flex items-center space-x-2.5">
             <h3 className="text-xs text-[#8ea39a] font-bold uppercase tracking-wider">Current Weather</h3>
             <span
@@ -84,7 +84,7 @@ export const WeatherOverviewCard: React.FC<WeatherOverviewCardProps> = ({
           <span className="text-xs font-sans text-[#c7d4cf] capitalize font-medium">{weather.description}</span>
         </div>
 
-        <div className="flex items-end justify-between mt-4">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mt-3 sm:mt-4 gap-3">
           <div className="flex items-center space-x-3.5">
             <div className="p-2 bg-[#0d1b18] border border-white/[0.08] rounded-xl text-[#32f26b] flex items-center justify-center min-w-[44px] min-h-[44px] shadow-subtle">
               {weather.icon && !iconError ? (
@@ -107,7 +107,7 @@ export const WeatherOverviewCard: React.FC<WeatherOverviewCardProps> = ({
               </span>
             </div>
           </div>
-          <div className="flex space-x-3.5 text-xs text-[#8ea39a] font-sans">
+          <div className="flex flex-wrap gap-2.5 sm:gap-3.5 text-xs text-[#8ea39a] font-sans">
             <div className="flex items-center space-x-1.5" title="Precipitation">
               <CloudRain size={14} className="text-[#28a7ff]" />
               <span className="text-[#c7d4cf]">{weather.precipitation !== undefined && weather.precipitation !== null ? `${weather.precipitation} mm` : '0 mm'}</span>
@@ -125,7 +125,7 @@ export const WeatherOverviewCard: React.FC<WeatherOverviewCardProps> = ({
 
         {/* Sunrise / Sunset and Updated Time row */}
         {(weather.sunrise || weather.sunset || updatedTime) && (
-          <div className="flex items-center justify-between text-[11px] text-[#8ea39a] font-sans pt-3 mt-3.5 border-t border-white/[0.07]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-[11px] text-[#8ea39a] font-sans pt-3 mt-3.5 border-t border-white/[0.07] gap-2">
             <div className="flex items-center space-x-3.5">
               {weather.sunrise && (
                 <div className="flex items-center space-x-1.5" title="Sunrise">

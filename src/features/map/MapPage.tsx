@@ -403,9 +403,9 @@ export const MapPage: React.FC = () => {
       </div>
 
       {/* Main Map Container */}
-      <div className="relative rounded-lg overflow-hidden border border-border-gray bg-mid-dark min-h-[580px] flex flex-col">
+      <div className="relative rounded-lg overflow-hidden border border-border-gray bg-mid-dark min-h-[360px] sm:min-h-[480px] lg:min-h-[580px] flex flex-col">
         {/* Layer Controls Bar (Top Left) */}
-        <div className="absolute top-3 left-3 z-[1000] flex flex-col space-y-2.5 p-2.5 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md max-w-[200px]">
+        <div className="absolute top-3 left-3 z-[1000] flex flex-col space-y-2.5 p-2 sm:p-2.5 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md max-w-[160px] sm:max-w-[200px]">
           <div className="flex items-center space-x-1.5 text-[10px] font-bold text-text-silver uppercase tracking-wider px-1">
             <Layers size={13} className="text-spotify-green" />
             <span>Map Layers</span>
@@ -469,7 +469,7 @@ export const MapPage: React.FC = () => {
         </div>
 
         {/* Live Metrics HUD (Top Right) */}
-        <div className="absolute top-3 right-3 z-[1000] flex flex-col space-y-2.5 w-[220px] p-3 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md">
+        <div className="absolute top-3 right-3 z-[1000] flex flex-col space-y-2.5 w-[180px] sm:w-[220px] p-2 sm:p-3 bg-dark-surface/95 border border-border-gray rounded-lg shadow-heavy backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-text-silver uppercase tracking-wider">
               Environmental Metrics

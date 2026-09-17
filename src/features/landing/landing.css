@@ -1,37 +1,51 @@
 /* ──────────────────────────────────────────
-   GeoTwin 360 — Landing Page Styles
-   Scoped styles and animations for the
-   marketing/landing page.
+   GeoTwin 360 — Cinematic Landing Page Styles
+   Luxury Dark Aesthetic inspired by Spotify &
+   High-Tech Climate Intelligence Telemetry.
    ────────────────────────────────────────── */
 
 /* ── Landing Page Design Tokens ── */
 .landing-page {
   --lp-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --lp-base: #121212;
-  --lp-surface: #181818;
-  --lp-surface-alt: #1f1f1f;
+  --lp-base: #02070c;
+  --lp-surface: #061019;
+  --lp-surface-elevated: #091724;
+  --lp-card: rgba(6, 16, 25, 0.78);
   --lp-accent: #1ed760;
-  --lp-accent-dark: #1db954;
-  --lp-accent-glow: rgba(30, 215, 96, 0.15);
+  --lp-accent-dark: #16b84f;
+  --lp-accent-glow: rgba(30, 215, 96, 0.3);
+  --lp-cyan: #00f2fe;
+  --lp-cyan-glow: rgba(0, 242, 254, 0.28);
   --lp-text-primary: #ffffff;
-  --lp-text-secondary: #b3b3b3;
-  --lp-text-muted: #8a8a8a;
-  --lp-negative: #f3727f;
-  --lp-warning: #ffa42b;
-  --lp-info: #539df5;
-  --lp-success: #1ed760;
-  --lp-card: #252525;
-  --lp-separator: #333333;
-  --lp-shadow-heavy: 0px 8px 24px rgba(0, 0, 0, 0.5);
-  --lp-shadow-medium: 0px 8px 8px rgba(0, 0, 0, 0.3);
+  --lp-text-secondary: #94a3b8;
+  --lp-text-muted: #64748b;
+  --lp-separator: rgba(255, 255, 255, 0.08);
+  --lp-border-subtle: rgba(255, 255, 255, 0.09);
+  --lp-border-highlight: rgba(30, 215, 96, 0.35);
 
   font-family: var(--lp-font);
   background-color: var(--lp-base);
   color: var(--lp-text-primary);
   line-height: 1.5;
   overflow-x: hidden;
+  position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Cinematic Ambient Mesh Grid & Auroras ── */
+.landing-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(rgba(30, 215, 96, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 50% -10%, rgba(30, 215, 96, 0.07) 0%, transparent 55%),
+    radial-gradient(circle at 90% 25%, rgba(0, 242, 254, 0.05) 0%, transparent 45%),
+    radial-gradient(circle at 10% 65%, rgba(30, 215, 96, 0.04) 0%, transparent 50%);
+  background-size: 32px 32px, 100% 100%, 100% 100%, 100% 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .landing-page * {
@@ -45,7 +59,7 @@
 .landing-page h5,
 .landing-page h6 {
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.18;
   text-wrap: balance;
 }
 
@@ -63,76 +77,97 @@
   display: block;
 }
 
-.landing-page ul,
-.landing-page ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 /* ── Container ── */
 .lp-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
   padding-right: 24px;
 }
 
-/* ── Buttons ── */
+/* ── Buttons (Spotify & Luxury Pill System) ── */
 .lp-btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 28px;
+  padding: 13px 30px;
   background-color: var(--lp-accent);
   color: #000000;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
   border-radius: 9999px;
-  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   border: none;
   cursor: pointer;
-  font-family: inherit;
+  box-shadow: 0 4px 20px rgba(30, 215, 96, 0.35);
+  position: relative;
+  overflow: hidden;
 }
+
+.lp-btn-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transition: 0.5s;
+}
+
 .lp-btn-primary:hover {
   background-color: var(--lp-accent-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(30, 215, 96, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(30, 215, 96, 0.5);
 }
+
+.lp-btn-primary:hover::after {
+  left: 100%;
+}
+
+.lp-btn-primary:active {
+  transform: translateY(0);
+}
+
 .lp-btn-primary:focus-visible {
   outline: 2px solid var(--lp-accent);
   outline-offset: 2px;
-}
-.lp-btn-primary:active {
-  transform: translateY(0);
 }
 
 .lp-btn-secondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 28px;
-  background-color: transparent;
-  color: var(--lp-text-primary);
-  font-size: 14px;
+  padding: 13px 30px;
+  background-color: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  border: 1px solid #7c7c7c;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   cursor: pointer;
-  font-family: inherit;
 }
+
 .lp-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: var(--lp-text-primary);
-  transform: translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
+
 .lp-btn-secondary:focus-visible {
   outline: 2px solid var(--lp-accent);
   outline-offset: 2px;
@@ -140,36 +175,142 @@
 
 /* ── Eyebrow Label ── */
 .lp-eyebrow {
-  display: inline-block;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 2.2px;
   text-transform: uppercase;
   color: var(--lp-accent);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 /* ── Section Heading ── */
 .lp-section-heading {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   color: var(--lp-text-primary);
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
-/* ── Card ── */
+/* ── Cinematic Glass Card ── */
 .lp-card {
-  background-color: var(--lp-surface);
-  border-radius: 8px;
+  background-color: var(--lp-card);
+  border: 1px solid var(--lp-separator);
+  border-radius: 16px;
   padding: 24px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
 }
+
 .lp-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--lp-shadow-medium);
+  border-color: rgba(30, 215, 96, 0.32);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(30, 215, 96, 0.12);
 }
 
-/* ── Animations ── */
+/* ── Spotlight Card Overlay Effect ── */
+.lp-spotlight-card {
+  position: relative;
+  background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(30, 215, 96, 0.08), transparent 40%),
+              rgba(6, 16, 25, 0.82);
+}
+
+/* ── Holographic Scanlines for Telemetry HUD ── */
+.lp-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.02),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.02)
+  );
+  background-size: 100% 3px, 6px 100%;
+}
+
+/* ── Radar Sweep Keyframe ── */
+@keyframes lp-radar-beam {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.lp-radar-sweep {
+  position: absolute;
+  width: 160%;
+  height: 160%;
+  top: -30%;
+  left: -30%;
+  background: conic-gradient(from 0deg at 50% 50%, rgba(0, 242, 254, 0.25) 0deg, rgba(30, 215, 96, 0.02) 60deg, transparent 65deg);
+  animation: lp-radar-beam 6s linear infinite;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* ── Shimmering Gradient Text ── */
+.lp-gradient-shimmer {
+  background: linear-gradient(115deg, #1ed760 0%, #00f2fe 50%, #1ed760 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: lp-shimmer 8s linear infinite;
+}
+
+@keyframes lp-shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── Live Pulse Beacon ── */
+@keyframes lp-pulse-beacon {
+  0% {
+    box-shadow: 0 0 0 0 rgba(30, 215, 96, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(30, 215, 96, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 215, 96, 0);
+  }
+}
+
+.lp-beacon {
+  animation: lp-pulse-beacon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Scroll Line Animation ── */
+@keyframes lp-line-pulse {
+  0%, 100% { opacity: 0.35; transform: scaleY(0.85); }
+  50% { opacity: 1; transform: scaleY(1.05); }
+}
+
+.lp-scroll-line {
+  animation: lp-line-pulse 2.2s ease-in-out infinite;
+  transform-origin: top;
+}
+
+/* ── Reveal and Transitions ── */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.lp-reveal.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes lp-fadeInUp {
   from {
     opacity: 0;
@@ -184,7 +325,7 @@
 @keyframes lp-slideInRight {
   from {
     opacity: 0;
-    transform: translateX(40px);
+    transform: translateX(36px);
   }
   to {
     opacity: 1;
@@ -193,36 +334,116 @@
 }
 
 .lp-animate-fade-in-up {
-  animation: lp-fadeInUp 0.7s ease forwards;
+  animation: lp-fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .lp-animate-slide-in-right {
-  animation: lp-slideInRight 0.8s ease forwards;
+  animation: lp-slideInRight 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ── Scroll Reveal ── */
-.lp-reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+/* ── Tabular numbers ── */
+.tabular-data {
+  font-variant-numeric: tabular-nums;
 }
 
-.lp-reveal.lp-visible {
-  opacity: 1;
-  transform: translateY(0);
+/* ── 3D Perspective & Depth Layering ── */
+.lp-3d-perspective {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.lp-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.lp-translate-z-10 {
+  transform: translateZ(10px);
+}
+
+.lp-translate-z-20 {
+  transform: translateZ(20px);
+}
+
+.lp-translate-z-30 {
+  transform: translateZ(30px);
+}
+
+/* 3D Isometric CAD Perspective Grid Plane */
+.lp-3d-grid-floor {
+  position: absolute;
+  inset-x: 0;
+  bottom: -40px;
+  height: 280px;
+  perspective: 600px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lp-3d-grid-plane {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  transform: rotateX(72deg) translateY(-20px);
+  background-image: 
+    linear-gradient(rgba(0, 242, 254, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 215, 96, 0.14) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 15%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 15%, transparent 75%);
+}
+
+/* 3D Glass Surface Elevation & Rim Lighting */
+.lp-glass-3d {
+  background: rgba(6, 16, 25, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 24px 0 rgba(30, 215, 96, 0.04),
+    0 24px 50px -12px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Floating 3D Micro-Motion */
+@keyframes lp-float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate3d(1, 1, 0, 0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate3d(1, 1, 0, 1.5deg);
+  }
+}
+
+.lp-float-3d {
+  animation: lp-float-slow 6s ease-in-out infinite;
 }
 
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   .lp-animate-fade-in-up,
-  .lp-animate-slide-in-right {
-    animation: none;
-    opacity: 1;
-    transform: none;
+  .lp-animate-slide-in-right,
+  .lp-radar-sweep,
+  .lp-beacon,
+  .lp-gradient-shimmer,
+  .lp-scroll-line,
+  .lp-float-3d {
+    animation: none !important;
   }
   .lp-reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+

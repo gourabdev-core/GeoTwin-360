@@ -87,7 +87,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Offline Banner */}
         {!isOnline && (
-          <div className="bg-[#1a1407]/90 backdrop-blur-md border-b border-[#ffa42b]/30 px-6 py-2.5 text-xs text-[#fed7aa] flex items-center justify-between z-50">
+          <div className="bg-[#1a1407]/90 backdrop-blur-md border-b border-[#ffa42b]/30 px-3 sm:px-6 py-2 sm:py-2.5 text-xs text-[#fed7aa] flex items-center justify-between z-50 gap-2">
             <div className="flex items-center space-x-2.5">
               <WifiOff size={14} className="text-[#ffa42b] shrink-0" />
               <span>
